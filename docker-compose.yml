@@ -1,0 +1,32 @@
+services:
+  hand-db:
+    image: postgres:latest
+    container_name: hand-db
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - hand-db-data:/var/lib/postgresql/data
+    networks:
+      - hand-network
+
+  hand-api:
+    build: .
+    container_name: hand-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      - hand-db
+    env_file:
+      - .env
+    networks:
+      - hand-network
+
+volumes:
+  hand-db-data:
+    driver: local
+
+networks:
+  hand-network:
+    driver: bridge
