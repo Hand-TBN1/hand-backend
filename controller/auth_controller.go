@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/gin-gonic/gin"
@@ -17,12 +18,16 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 	var user models.User
 
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		apiErr := apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusBadRequest).
+			WithMessage(apierror.ErrInvalidInput).
+			Build()
+		c.JSON(apiErr.HttpStatus, apiErr)
 		return
 	}
 
-	if err := ctrl.AuthService.Register(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if apiErr := ctrl.AuthService.Register(&user); apiErr != nil {
+		c.JSON(apiErr.HttpStatus, apiErr)
 		return
 	}
 
@@ -37,13 +42,17 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		apiErr := apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusBadRequest).
+			WithMessage(apierror.ErrInvalidInput).
+			Build()
+		c.JSON(apiErr.HttpStatus, apiErr)
 		return
 	}
 
-	user, token, err := ctrl.AuthService.Login(req.Email, req.Password)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	user, token, apiErr := ctrl.AuthService.Login(req.Email, req.Password)
+	if apiErr != nil {
+		c.JSON(apiErr.HttpStatus, apiErr)
 		return
 	}
 
