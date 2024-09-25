@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"gorm.io/gorm/logger"
 	"log"
+
+	"gorm.io/gorm/logger"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ func NewPostgresql(migrations ...any) *gorm.DB {
 
 	db, err := gorm.Open(postgres.New(postgres.Config{
 		DSN: fmt.Sprintf(
-			"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+			"host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
 			Env.PostgresHost,
 			Env.PostgresUser,
 			Env.PostgresPassword,
