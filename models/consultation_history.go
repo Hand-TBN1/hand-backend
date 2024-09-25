@@ -16,4 +16,8 @@ type ConsultationHistory struct {
     ConsultationDate time.Time
     CreatedAt        time.Time
     UpdatedAt        time.Time
+
+    // Associations
+    Patient          User       `gorm:"foreignKey:PatientID"`
+    Therapist        Therapist  `gorm:"foreignKey:TherapistID"`
 }

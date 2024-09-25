@@ -10,14 +10,18 @@ type BookedScheduleStatus string
 
 const (
     Success  BookedScheduleStatus = "success"
-    Canceled BookedScheduleStatus = "cancelled"
+    Canceled BookedScheduleStatus = "canceled"
 )
 
 type BookedSchedule struct {
-    ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    PatientID      uuid.UUID `gorm:"type:uuid;not null;foreignKey:PatientID"`
-    TherapistID    uuid.UUID `gorm:"type:uuid;not null;foreignKey:TherapistID"`
+    ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
+    UserID          uuid.UUID `gorm:"type:uuid;not null"`
+    TherapistID     uuid.UUID `gorm:"type:uuid;not null"`
     AppointmentDate time.Time
-    Status         BookedScheduleStatus `gorm:"type:enum('success', 'canceled')"`
-    UpdatedAt      time.Time
+    Status         BookedScheduleStatus `gorm:"type:booked_schedule_status_enum"`
+    UpdatedAt       time.Time
+
+    // Associations
+    User       User       `gorm:"foreignKey:UserID"`
+    Therapist  User       `gorm:"foreignKey:TherapistID"`
 }

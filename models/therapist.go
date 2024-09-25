@@ -13,4 +13,8 @@ type Therapist struct {
     AppointmentRate int64
     CreatedAt       time.Time
     UpdatedAt       time.Time
+
+    // Associations
+    BookedSchedules []BookedSchedule `gorm:"foreignKey:TherapistID"`
+    Appointments    []Appointment    `gorm:"foreignKey:TherapistID"`
 }

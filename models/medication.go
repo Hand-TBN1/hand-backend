@@ -16,4 +16,7 @@ type Medication struct {
     RequiresPrescription bool
     CreatedAt        time.Time
     UpdatedAt        time.Time
+
+    // Associations
+    Prescriptions    []Prescription    `gorm:"foreignKey:MedicationID"`
 }

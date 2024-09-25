@@ -8,9 +8,13 @@ import (
 
 type Appointment struct {
     ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    PatientID       uuid.UUID `gorm:"type:uuid;not null;foreignKey:PatientID"`
-    TherapistID     uuid.UUID `gorm:"type:uuid;not null;foreignKey:TherapistID"`
+    UserID          uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
+    TherapistID     uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
     AppointmentDate time.Time
     CreatedAt       time.Time
     UpdatedAt       time.Time
+
+    // Associations
+    User       User  `gorm:"foreignKey:UserID"`
+    Therapist  User  `gorm:"foreignKey:TherapistID"`
 }
