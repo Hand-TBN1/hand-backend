@@ -14,4 +14,7 @@ type PersonalHealthPlan struct {
     ReminderSchedule string
     CreatedAt       time.Time
     UpdatedAt       time.Time
+
+    // Associations
+    Patient          User              `gorm:"foreignKey:PatientID"`
 }

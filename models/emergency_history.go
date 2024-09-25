@@ -13,4 +13,8 @@ type EmergencyHistory struct {
     TotalPrice    int64
     CreatedAt     time.Time
     UpdatedAt     time.Time
+
+    // Associations
+    User       User      `gorm:"foreignKey:UserID"`
+    Therapist  Therapist `gorm:"foreignKey:TherapistID"`
 }

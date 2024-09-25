@@ -9,4 +9,8 @@ type Prescription struct {
     ConsultationHistoryID uuid.UUID `gorm:"type:uuid;not null;foreignKey:ConsultationHistoryID"`
     MedicationID          uuid.UUID `gorm:"type:uuid;not null;foreignKey:MedicationID"`
     Dosage                string
+
+    // Associations
+    ConsultationHistory   ConsultationHistory `gorm:"foreignKey:ConsultationHistoryID"`
+    Medication            Medication          `gorm:"foreignKey:MedicationID"`
 }

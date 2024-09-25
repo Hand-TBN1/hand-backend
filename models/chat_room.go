@@ -8,7 +8,11 @@ import (
 
 type ChatRoom struct {
     ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    FirstUserID  uuid.UUID `gorm:"type:uuid;not null;foreignKey:FirstUserID"`
-    SecondUserID uuid.UUID `gorm:"type:uuid;not null;foreignKey:SecondUserID"`
+    FirstUserID  uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
+    SecondUserID uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
     CreatedAt    time.Time
+
+    // Associations
+    FirstUser  User `gorm:"foreignKey:FirstUserID"`
+    SecondUser User `gorm:"foreignKey:SecondUserID"`
 }

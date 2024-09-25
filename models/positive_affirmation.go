@@ -11,4 +11,7 @@ type PositiveAffirmation struct {
     PatientID         uuid.UUID `gorm:"type:uuid;not null;foreignKey:PatientID"`
     AffirmationContent string
     SentAt            time.Time
+
+    // Associations
+    Patient            User              `gorm:"foreignKey:PatientID"`
 }

@@ -12,4 +12,8 @@ type ChatMessage struct {
     ChatRoomID     uuid.UUID `gorm:"type:uuid;not null;foreignKey:ChatRoomID"`
     MessageContent string
     SentAt         time.Time
+
+    // Associations
+    Sender   User      `gorm:"foreignKey:SenderID"`
+    ChatRoom ChatRoom  `gorm:"foreignKey:ChatRoomID"`
 }
