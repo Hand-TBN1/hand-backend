@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/Hand-TBN1/hand-backend/config"
-	"github.com/Hand-TBN1/hand-backend/schema"
+	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/joho/godotenv"
 )
 
@@ -18,7 +18,7 @@ func main(){
 	config.LoadEnv()
 
 	db := config.NewPostgresql(
-		&schema.User{},
+		&models.User{},
 	)
 
 	if db != nil {
