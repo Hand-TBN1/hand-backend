@@ -48,6 +48,8 @@ func createEnums(db *gorm.DB) {
     enums := map[string]string{
         "role_enum":              "CREATE TYPE role_enum AS ENUM ('admin', 'patient', 'therapist');",
         "booked_schedule_status_enum": "CREATE TYPE booked_schedule_status_enum AS ENUM ('success', 'canceled');",
+        "consultation_enum" :  "CREATE TYPE consultation_enum AS ENUM ('online', 'offline', 'hybrid');",
+        "media_enum" : "CREATE TYPE media_enum AS ENUM ('article', 'video');",
         // Add more enums as needed
     }
 
