@@ -8,6 +8,7 @@ import (
 	"github.com/Hand-TBN1/hand-backend/middleware"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/routes"
+	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/joho/godotenv"
 )
 
@@ -51,6 +52,9 @@ func main() {
         log.Println("Failed Connect")
     }
 
+    midtransClient := config.SetupMidtrans()
+    paymentService := services.NewPaymentService(midtransClient)
+
     engine := config.NewGin()
     engine.Use(middleware.CORS())
 
@@ -59,6 +63,7 @@ func main() {
     routes.RegisterMedicationRoutes(engine, db)
     routes.RegisterMediaRoutes(engine, db)
     routes.RegisterMedicationTransactionHistoryRoutes(engine, db)
+    routes.SetupPaymentRoutes(engine, paymentService)  
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {
