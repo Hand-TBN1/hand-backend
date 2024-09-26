@@ -23,13 +23,13 @@ func main() {
     db := config.NewPostgresql(
         &models.User{},
         &models.Therapist{},
-        &models.BookedSchedule{},
         &models.CheckIn{},
         &models.ChatMessage{},
         &models.ChatRoom{},
         &models.PositiveAffirmation{},
         &models.EmergencyHistory{},
         &models.Media{},
+        &models.Availability{},
         &models.PersonalHealthPlan{},
         &models.Appointment{},
         &models.ConsultationHistory{},
@@ -59,6 +59,7 @@ func main() {
     routes.RegisterMedicationRoutes(engine, db)
     routes.RegisterMediaRoutes(engine, db)
     routes.RegisterMedicationTransactionHistoryRoutes(engine, db)
+    routes.RegisterTherapistRoutes(engine, db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {

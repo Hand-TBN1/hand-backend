@@ -24,7 +24,5 @@ type Therapist struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 
-	// Associations
-	BookedSchedules []BookedSchedule `gorm:"foreignKey:TherapistID"`
 	Appointments    []Appointment    `gorm:"foreignKey:TherapistID"`
 }

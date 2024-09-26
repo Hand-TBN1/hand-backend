@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// CreateMediaDTO uses the enum MediaType instead of string
 type CreateMediaDTO struct {
 	Type        models.MediaType `json:"type" binding:"required"`
 	Title       string           `json:"title" binding:"required"`
