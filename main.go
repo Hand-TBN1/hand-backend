@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-
+	"github.com/Hand-TBN1/hand-backend/middleware"
 	"github.com/Hand-TBN1/hand-backend/config"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/routes"
@@ -28,7 +28,7 @@ func main() {
         &models.ChatRoom{},
         &models.PositiveAffirmation{},
         &models.EmergencyHistory{},
-        &models.MindfulnessExercise{},
+        &models.Media{},
         &models.PersonalHealthPlan{},
         &models.Appointment{},
         &models.ConsultationHistory{},
@@ -43,8 +43,12 @@ func main() {
     }
 
     engine := config.NewGin()
+    engine.Use(middleware.CORS())
 
     routes.SetupRoutes(engine, db)
+    routes.RegisterCheckInRoutes(engine, db)
+    routes.RegisterMedicationRoutes(engine, db)
+    routes.RegisterMediaRoutes(engine, db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {
