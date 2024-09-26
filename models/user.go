@@ -16,13 +16,13 @@ const (
 
 type User struct {
     ID               uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    Name             string
-    Email            string `gorm:"unique;not null"`
-    PhoneNumber      string `gorm:"unique;not null"`
-    ImageURL         string
-    Password         string
-    Role             Role `gorm:"type:role_enum"`
-    IsMobileVerified bool
+    Name             string    `json:"name"`
+    Email            string    `json:"email" gorm:"unique;not null"`
+    PhoneNumber      string    `json:"phone_number" gorm:"unique;not null"`
+    ImageURL         string    `json:"image_url"`
+    Password         string    `json:"password"`
+    Role             Role      `json:"role" gorm:"type:role_enum"`
+    IsMobileVerified bool      `json:"is_mobile_verified"`
     CreatedAt        time.Time
     UpdatedAt        time.Time
 

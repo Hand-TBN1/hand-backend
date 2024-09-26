@@ -45,10 +45,12 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
+		// Store the claims in the context
+		c.Set("claims", claims)
+
 		// Check if the user's role is allowed
-		userRole := claims.Role
 		for _, role := range allowedRoles {
-			if role == userRole {
+			if role == claims.Role {
 				c.Next()
 				return
 			}
@@ -62,11 +64,3 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 		c.Abort()
 	}
 }
-
-
-// Contoh Penggunaan
-// router.Use(middleware.RoleMiddleware("admin", "therapist")) // Allow only admin and therapist
-// 	{
-// 		// Protected routes that only admin and therapist can access
-// 		protected.GET("/some-endpoint", someHandler)
-// 	}

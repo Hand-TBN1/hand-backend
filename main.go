@@ -35,7 +35,15 @@ func main() {
         &models.ConsultationHistory{},
         &models.Medication{},
         &models.Prescription{},
+        &models.MedicationHistoryTransaction{},
+        &models.MedicationHistoryItem{},
     )
+
+    redisClient := config.NewRedis()
+
+    if redisClient != nil {
+        log.Println("Connect Redis Successful")
+    }
 
     if db != nil {
         log.Println("Connect Successful")
@@ -50,6 +58,7 @@ func main() {
     routes.RegisterCheckInRoutes(engine, db)
     routes.RegisterMedicationRoutes(engine, db)
     routes.RegisterMediaRoutes(engine, db)
+    routes.RegisterMedicationTransactionHistoryRoutes(engine, db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {
