@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"os"
-
+	"github.com/Hand-TBN1/hand-backend/middleware"
 	"github.com/Hand-TBN1/hand-backend/config"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/routes"
@@ -43,6 +43,7 @@ func main() {
     }
 
     engine := config.NewGin()
+    engine.Use(middleware.CORS())
 
     routes.SetupRoutes(engine, db)
     routes.RegisterCheckInRoutes(engine, db)
