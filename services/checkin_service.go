@@ -47,7 +47,7 @@ func (service *CheckInService) UpdateCheckIn(id string, newCheckIn models.CheckI
 		return err
 	}
 	if err := service.DB.First(&checkIn, "id = ?", parsedID).Error; err != nil {
-		return errors.New("Check-in not found")
+		return errors.New("check-in not found")
 	}
 	checkIn.MoodScore = newCheckIn.MoodScore
 	checkIn.Notes = newCheckIn.Notes
