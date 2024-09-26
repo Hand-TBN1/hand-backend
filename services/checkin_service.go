@@ -58,3 +58,27 @@ func (service *CheckInService) UpdateCheckIn(id string, newCheckIn models.CheckI
 	}
 	return nil
 }
+	
+func (service *CheckInService) FindCheckInByUserIDAndDate(userID uuid.UUID, date string) (*models.CheckIn, error) {
+	var checkIn models.CheckIn
+
+	// Query the database for a check-in by userID and the date in UTC
+	err := service.DB.Where("user_id = ? AND DATE(check_in_date) = ?", userID, date).First(&checkIn).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &checkIn, nil
+}
+
+	
+func (service *CheckInService) UpdateCheckInByUserIDAndDate(userID uuid.UUID, date string, updatedCheckIn models.CheckIn) error {
+	// Ensure the check-in record is updated, not inserted
+	return service.DB.Model(&models.CheckIn{}).
+		Where("user_id = ? AND DATE(check_in_date) = ?", userID, date).
+		Updates(map[string]interface{}{
+			"mood_score": updatedCheckIn.MoodScore,
+			"notes":      updatedCheckIn.Notes,
+			"updated_at": updatedCheckIn.UpdatedAt,
+		}).Error
+}
