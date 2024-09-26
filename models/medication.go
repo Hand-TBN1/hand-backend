@@ -8,7 +8,7 @@ import (
 
 type Medication struct {
     ID               uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    ImageURL         string
+    ImageURL         string   `json:"image_url"`
     Stock            int
     Name             string
     Price            int64
