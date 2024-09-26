@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/Hand-TBN1/hand-backend/utilities"
@@ -109,14 +110,33 @@ func (ctrl *TherapistController) CreateTherapist(c *gin.Context) {
 }
 
 func (ctrl *TherapistController) UpdateAvailability(c *gin.Context) {
-	therapistID := c.Param("id")
+	claims, exists := c.Get("claims")
 	var availabilityDTO map[string]interface{}
+	
+	if !exists {
+		c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusUnauthorized).
+			WithMessage("Unauthorized access").
+			Build())
+		return
+	}
+
+	userClaims := claims.(*utilities.Claims)
+
+	therapistUUID, err := uuid.Parse(userClaims.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusBadRequest).
+			WithMessage("Invalid user ID in token").
+			Build())
+		return
+	}
 
 	if err := c.ShouldBindJSON(&availabilityDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
-	
+
 	if _, ok := availabilityDTO["is_available"]; !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "'is_available' is required"})
 		return
@@ -129,20 +149,17 @@ func (ctrl *TherapistController) UpdateAvailability(c *gin.Context) {
 	
 	finalDTO.Date = availabilityDTO["date"].(string)
 	finalDTO.IsAvailable = availabilityDTO["is_available"].(bool)
-	
-	date, err := time.Parse("2006-01-02", finalDTO.Date)
+	date, err := time.Parse("2006-01-02",finalDTO.Date)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
 		return
 	}
-	
-	apiErr := ctrl.TherapistService.UpdateAvailabilityByDate(therapistID, date, finalDTO.IsAvailable)
+
+	apiErr := ctrl.TherapistService.UpdateAvailabilityByDate(therapistUUID.String(), date, finalDTO.IsAvailable)
 	if apiErr != nil {
 		c.JSON(apiErr.HttpStatus, apiErr)
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{"message": "Availability updated successfully"})
-	
-}
 
+	c.JSON(http.StatusOK, gin.H{"message": "Availability updated successfully"})
+}
