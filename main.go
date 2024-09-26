@@ -37,6 +37,12 @@ func main() {
         &models.Prescription{},
     )
 
+    redisClient := config.NewRedis()
+
+    if redisClient != nil {
+        log.Println("Connect Redis Successful")
+    }
+
     if db != nil {
         log.Println("Connect Successful")
     } else {
