@@ -46,6 +46,7 @@ func main() {
 
     routes.SetupRoutes(engine, db)
     routes.RegisterCheckInRoutes(engine, db)
+    routes.RegisterMedicationRoutes(engine, db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {
