@@ -28,7 +28,7 @@ type User struct {
 
     // Associations
     Therapist         Therapist         `gorm:"foreignKey:UserID"`
-    BookedSchedules    []BookedSchedule   `gorm:"foreignKey:UserID"`
+    Appointment    []Appointment   `gorm:"foreignKey:UserID"`
     PositiveAffirmations []PositiveAffirmation `gorm:"foreignKey:PatientID"`
     PersonalHealthPlans  []PersonalHealthPlan  `gorm:"foreignKey:PatientID"`
     CheckIns            []CheckIn          `gorm:"foreignKey:UserID"`

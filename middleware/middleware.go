@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -50,6 +51,7 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 
 		// Check if the user's role is allowed
 		for _, role := range allowedRoles {
+			fmt.Printf("User role from token: %s, Allowed role: %s\n", claims.Role, role)
 			if role == claims.Role {
 				c.Next()
 				return
