@@ -17,8 +17,8 @@ const (
 type User struct {
     ID               uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
     Name             string
-    Email            string
-    PhoneNumber      string
+    Email            string `gorm:"unique;not null"`
+    PhoneNumber      string `gorm:"unique;not null"`
     ImageURL         string
     Password         string
     Role             Role `gorm:"type:role_enum"`
