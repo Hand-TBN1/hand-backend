@@ -77,7 +77,7 @@ func (ctrl *MedicationTransactionHistoryController) PostMedicationTransaction(c 
 
 	transaction := models.MedicationHistoryTransaction{
 		UserID:         uuid.MustParse(userClaims.UserID),
-		TotalPrice:     calculateTotalPrice(transactionRequest.Items), // Helper function to calculate the total price
+		TotalPrice:     calculateTotalPrice(transactionRequest.Items),
 		TransactionDate: time.Now(),
 		Items:          transactionRequest.Items,
 	}
