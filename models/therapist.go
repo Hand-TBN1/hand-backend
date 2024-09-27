@@ -17,6 +17,7 @@ const (
 type Therapist struct {
 	ID              uuid.UUID        `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
 	UserID          uuid.UUID        `gorm:"type:uuid;not null;foreignKey:UserID"`
+	User            *User             `gorm:"foreignKey:UserID"`
 	Location        string
 	Specialization  string
 	Consultation    ConsultationType `gorm:"type:consultation_enum"`

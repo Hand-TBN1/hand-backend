@@ -18,13 +18,15 @@ type TherapistService struct {
 func (service *TherapistService) GetTherapistsFiltered(consultationType, location string, date time.Time) ([]models.Therapist, *apierror.ApiError) {
 	var therapists []models.Therapist
 
-	query := service.DB.Model(&models.Therapist{})
+	query := service.DB.Model(&models.Therapist{}).Preload("User", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, name, image_url")
+	})
 
 	if consultationType != "" {
 		query = query.Where("consultation = ?", consultationType)
 	}
 	if location != "" {
-		query = query.Where("location = ?", location)
+		query = query.Where("location ILIKE ?", "%"+location+"%")
 	}
 
 	if err := query.Find(&therapists).Error; err != nil {

@@ -27,7 +27,7 @@ type User struct {
     UpdatedAt        time.Time
 
     // Associations
-    Therapist         Therapist         `gorm:"foreignKey:UserID"`
+    Therapist         *Therapist         `gorm:"foreignKey:UserID"`
     Appointment    []Appointment   `gorm:"foreignKey:UserID"`
     PositiveAffirmations []PositiveAffirmation `gorm:"foreignKey:PatientID"`
     PersonalHealthPlans  []PersonalHealthPlan  `gorm:"foreignKey:PatientID"`
