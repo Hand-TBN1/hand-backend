@@ -65,6 +65,7 @@ func main() {
     routes.RegisterMedicationTransactionHistoryRoutes(engine, db)
     routes.RegisterTherapistRoutes(engine, db)
     routes.SetupPaymentRoutes(engine, paymentService)  
+    routes.RegisterUserRoutes(engine, db)  
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {
