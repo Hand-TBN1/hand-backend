@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sync"
+	"time"
 
 	"github.com/Hand-TBN1/hand-backend/config"
+	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/utilities"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -17,151 +19,289 @@ import (
 	"gorm.io/gorm"
 )
 
-type ChatRoom struct {
-	ID           string `gorm:"primaryKey"`
-	FirstUserID  string
-	SecondUserID string
-	IsEnd        bool
+type ClientMessage struct {
+	Event string `json:"event"` // Event type (e.g., "find_match", "send_message")
+	Data  string `json:"data"`  // Message content or event data
+}
+type ClientQueue struct {
+    UserID string `json:"user_id"`
+    Emote  int    `json:"emote"`
+}
+
+type ClientInServer struct {
+    Ws    *websocket.Conn
+    Match *models.ChatRoom
+    Queue *ClientQueue
 }
 
 var (
-	upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
-	}
-	clients     = make(map[string]*websocket.Conn) // Map of user ID to WebSocket connections
-	clientsM    sync.Mutex                         // Mutex for handling concurrent access to clients map
-	redisClient *redis.Client
-	db          *gorm.DB
+    upgrader     = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+    clients      = make(map[string]*ClientInServer)
+    clientsM     sync.Mutex
+    redisClient  *redis.Client
+    db           *gorm.DB
 )
 
-func validateToken(token string) (string, error) {
-	claims, err := utilities.ValidateJWT(token)
-	if err != nil {
-		return "", fmt.Errorf("invalid token: %v", err)
-	}
-	return claims.UserID, nil
+func loadEnvironment() {
+    if err := godotenv.Load("../.env"); err != nil {
+        log.Printf("Error loading .env file: %v", err)
+    }
 }
 
-func handleConnections(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("authToken")
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	userID, err := validateToken(cookie.Value)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("Failed to upgrade WebSocket: %v", err)
-		return
-	}
-	defer ws.Close()
-
-	// Add user to the active clients map
-	clientsM.Lock()
-	clients[userID] = ws // Store user ID with its WebSocket connection
-	clientsM.Unlock()
-
-	// Check if there's an existing room for the user in the database
-	room := new(ChatRoom)
-	if err := db.Where("(first_user_id = ? OR second_user_id = ?) AND is_end = false", userID, userID).First(&room).Error; err == nil {
-		// If room exists, handle messaging for the room
-		log.Printf("User %s joined an existing room %s", userID, room.ID)
-		handleRoomMessaging(ws, room, userID)
-		return
-	}
-
-	// No existing room: try to pop from Redis queue to match with another user
-	ctx := context.Background()
-	matchedUserID, err := redisClient.SPop(ctx, "waitingQueue").Result()
-	if err != nil || matchedUserID == "" || matchedUserID == userID {
-		// If no match found or the user is the only one in the queue, add them to the queue and wait
-		redisClient.SAdd(ctx, "waitingQueue", userID)
-		log.Printf("User %s added to waiting queue", userID)
-		waitForMatch(ws, userID)
-		return
-	}
-
-	// Create a new chat room if match is found
-	roomID := uuid.New().String()
-	newRoom := &ChatRoom{
-		ID:           roomID,
-		FirstUserID:  userID,
-		SecondUserID: matchedUserID,
-		IsEnd:        false,
-	}
-	if err := db.Create(newRoom).Error; err != nil {
-		log.Printf("Failed to create new room in the database: %v", err)
-		return
-	}
-
-	log.Printf("Created new room %s for users %s and %s", roomID, userID, matchedUserID)
-	handleRoomMessaging(ws, newRoom, userID)
-}
-
-// handleRoomMessaging listens for messages from the user and forwards them to their chat partner
-func handleRoomMessaging(ws *websocket.Conn, room *ChatRoom, senderID string) {
-	defer ws.Close()
-	for {
-		_, message, err := ws.ReadMessage()
-		if err != nil {
-			log.Printf("Error reading message: %v", err)
-			break
-		}
-		sendMessageToPartner(room, senderID, message)
-	}
-}
-
-// sendMessageToPartner forwards a message to the chat partner
-func sendMessageToPartner(room *ChatRoom, senderID string, message []byte) {
-	var partnerID string
-	if senderID == room.FirstUserID {
-		partnerID = room.SecondUserID
-	} else {
-		partnerID = room.FirstUserID
-	}
-
-	clientsM.Lock()
-	partnerConn, ok := clients[partnerID]
-	clientsM.Unlock()
-
-	if ok {
-		partnerConn.WriteMessage(websocket.TextMessage, message)
-	}
-}
-
-// endChatRoom ends the chat room by marking it as ended in the database
-func endChatRoom(room *ChatRoom, userID string) {
-	// If one user leaves, you might want to mark the chat room as ended or remove their connection
-	if room.FirstUserID == userID || room.SecondUserID == userID {
-		room.IsEnd = true
-		db.Save(room) // Mark the room as ended in the database
-	}
-}
-
-// waitForMatch does nothing while the user waits for a match.
-func waitForMatch(ws *websocket.Conn, userID string) {
-	log.Printf("User %s is waiting for a match", userID)
-
-	// As per your logic, if a user is waiting, you don't need to pop them here, they will remain in the queue until matched.
+func initializeServices() {
+	config.LoadEnv()
+    db = config.NewPostgresql()
+    redisClient = config.NewRedis()
 }
 
 func main() {
-	err := godotenv.Load("../.env")
-    apiEnv := os.Getenv("ENV")
-    if err != nil && apiEnv == "" {
-        log.Println("fail to load env", err)
-    }
-	config.LoadEnv()
-	db = config.NewPostgresql()
-	redisClient = config.NewRedis()
-
-	http.HandleFunc("/ws", handleConnections)
-	log.Println("WebSocket server starting on http://localhost:8000/ws")
-	log.Fatal(http.ListenAndServe(":8000", nil))
+    loadEnvironment()
+    initializeServices()
+    http.HandleFunc("/ws", handleConnections)
+    log.Println("WebSocket server starting on http://localhost:8000/ws")
+    log.Fatal(http.ListenAndServe(":8000", nil))
 }
+
+
+
+func handleConnections(w http.ResponseWriter, r *http.Request) {
+    userID, ws, err := authenticateAndUpgrade(w, r)
+    if err != nil {
+        return // Error handled within function
+    }
+    defer ws.Close()
+
+    client := &ClientInServer{Ws: ws}
+    clientsM.Lock()
+    clients[userID] = client
+    clientsM.Unlock()
+
+    listenForMessages(ws, userID)
+    cleanupClient(userID)
+}
+
+func authenticateAndUpgrade(w http.ResponseWriter, r *http.Request) (string, *websocket.Conn, error) {
+    cookie, err := r.Cookie("authToken")
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return "", nil, err
+    }
+
+    claims, err := utilities.ValidateJWT(cookie.Value)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return "", nil, err
+    }
+
+    ws, err := upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Printf("Failed to upgrade WebSocket: %v", err)
+        return "", nil, err
+    }
+
+    return claims.UserID, ws, nil
+}
+
+func listenForMessages(ws *websocket.Conn, userID string) {
+    for {
+        _, message, err := ws.ReadMessage()
+        if err != nil {
+            log.Printf("Error reading message: %v", err)
+            break
+        }
+
+        handleClientMessage(message, userID)
+    }
+}
+
+func handleClientMessage(message []byte, userID string) {
+    var msg ClientMessage
+    if err := json.Unmarshal(message, &msg); err != nil {
+        log.Printf("Error unmarshalling message: %v", err)
+        return
+    }
+
+    switch msg.Event {
+    case "find_match":
+        findMatch(userID, msg.Data)
+    case "send_message":
+        sendMessageToPartner(userID, msg.Data)
+    case "check_match":
+        checkMatchStatus(userID)
+    default:
+        log.Printf("Unknown event: %s", msg.Event)
+    }
+}
+
+func findMatch(userID, data string) {
+    var queueData ClientQueue
+    if err := json.Unmarshal([]byte(data), &queueData); err != nil {
+        log.Printf("Error parsing queue data: %v", err)
+        return
+    }
+
+    ctx := context.Background()
+    queueData.UserID = userID
+    serializedQueueData, _ := json.Marshal(queueData)
+
+    // Attempt to find a matching queue item
+    matchedData, err := redisClient.SPop(ctx, "waitingQueue").Result()
+    if err != nil || matchedData == "" {
+        // No match found, add user to queue
+        redisClient.SAdd(ctx, "waitingQueue", serializedQueueData)
+        log.Printf("User %s added to waiting queue", userID)
+		clients[userID].Queue = &queueData
+        clients[userID].Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "in_queue", "data": ""}`))
+        return
+    }
+
+    var matchedQueue ClientQueue
+    json.Unmarshal([]byte(matchedData), &matchedQueue)
+
+    if matchedQueue.Emote == queueData.Emote {
+        createChatRoom(userID, matchedQueue.UserID)
+    } else {
+        // No suitable match found, re-add to the queue
+        redisClient.SAdd(ctx, "waitingQueue", serializedQueueData)
+    }
+}
+
+func createChatRoom(firstUserID, secondUserID string) {
+    roomID := uuid.New()
+    newRoom := models.ChatRoom{
+        ID:           roomID,
+        FirstUserID:  uuid.MustParse(firstUserID),
+        SecondUserID: uuid.MustParse(secondUserID),
+        IsEnd:        false,
+    }
+    db.Create(&newRoom)
+	clients[firstUserID].Queue = nil
+	clients[secondUserID].Queue = nil
+	clients[firstUserID].Match = &newRoom
+	clients[secondUserID].Match = &newRoom
+    notifyUsersOfMatch(firstUserID, secondUserID, roomID)
+}
+
+func notifyUsersOfMatch(firstUserID, secondUserID string, roomID uuid.UUID) {
+    message := fmt.Sprintf(`{"event": "matched", "data": "Matched in room %s"}`, roomID)
+    clients[firstUserID].Ws.WriteMessage(websocket.TextMessage, []byte(message))
+    clients[secondUserID].Ws.WriteMessage(websocket.TextMessage, []byte(message))
+}
+
+func sendMessageToPartner(userID, message string) {
+
+    room, exists := findChatRoomForUser(userID)
+    if !exists {
+        return
+    }
+
+	senderUUID, err := uuid.Parse(userID)
+    if err != nil {
+        log.Printf("Invalid sender UUID: %v", err)
+        return
+    }
+
+	chatMessage := models.ChatMessage{
+        SenderID:       senderUUID,
+        ChatRoomID:     room.ID,
+        MessageContent: message,
+        SentAt:         time.Now(),
+    }
+
+
+	if result := db.Create(&chatMessage); result.Error != nil {
+        log.Printf("Failed to save chat message: %v", result.Error)
+        return
+    }
+
+	
+
+	data := map[string]interface{}{
+		"event": "message",
+		"data": chatMessage, // Assuming `chatMessage` is your structured data
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Error marshalling data: %v", err)
+		return
+	}
+    partnerID := getPartnerID(room, userID)
+    clients[userID].Ws.WriteMessage(websocket.TextMessage, jsonData)
+    clients[partnerID].Ws.WriteMessage(websocket.TextMessage, jsonData)
+}
+
+func findChatRoomForUser(userID string) (*models.ChatRoom, bool) {
+    var room models.ChatRoom
+    if err := db.Where("(first_user_id = ? OR second_user_id = ?) AND is_end = false", userID, userID).First(&room).Error; err != nil {
+        return nil, false
+    }
+    return &room, true
+}
+
+func getPartnerID(room *models.ChatRoom, userID string) string {
+    if room.FirstUserID.String() == userID {
+        return room.SecondUserID.String()
+    }
+    return room.FirstUserID.String()
+}
+
+func cleanupClient(userID string) {
+    clientsM.Lock()
+    delete(clients, userID)
+    clientsM.Unlock()
+}
+
+func checkMatchStatus(userID string) {
+
+	ctx := context.Background()
+	if clients[userID].Queue == nil {
+		queueMembers, err := redisClient.SMembers(ctx, "waitingQueue").Result()
+		if err != nil {
+			log.Printf("Error retrieving Redis queue: %v", err)
+			clients[userID].Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "error", "data": "Unable to check queue status"}`))
+			return
+		}
+
+		foundInQueue := false
+		var userQueue ClientQueue
+
+		for _, queueData := range queueMembers {
+			var queuedUser ClientQueue
+			if err := json.Unmarshal([]byte(queueData), &queuedUser); err == nil && queuedUser.UserID == userID {
+				userQueue = queuedUser
+				foundInQueue = true
+				break
+			}
+		}
+
+		if foundInQueue {
+			// User is found in the queue, update the ClientInServer.Queue
+			clientsM.Lock()
+			clients[userID].Queue = &userQueue
+			clientsM.Unlock()
+		}
+	}
+
+
+
+	if clients[userID].Match == nil {
+		room, exists := findChatRoomForUser(userID)
+		if exists {
+			clientsM.Lock()
+			clients[userID].Match = room
+			clientsM.Unlock()
+		}
+	}
+	clientsM.Lock()
+	client := clients[userID]
+	clientsM.Unlock()
+
+	if client.Queue != nil {
+		client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "in_queue", "data": ""}`))
+	} else if client.Match != nil {
+		client.Ws.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(`{"event": "matched", "data": "%s"}`, client.Match.ID)))
+	} else {
+		client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "free", "data": ""}`))
+	}
+}
+
