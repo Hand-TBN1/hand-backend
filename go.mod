@@ -3,6 +3,7 @@ module github.com/Hand-TBN1/hand-backend
 go 1.22.5
 
 require (
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.6.0
@@ -12,6 +13,11 @@ require (
 	golang.org/x/crypto v0.27.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
+)
+
+require (
+	github.com/cheekybits/is v0.0.0-20150225183255-68e9c0620927 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 )
 
 require (
