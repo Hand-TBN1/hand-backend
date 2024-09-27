@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RoleMiddleware checks if the user has one of the required roles
+// RoleMiddleware checks if the user is authenticated and optionally verifies their role.
 func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract the token from the Authorization header
@@ -48,6 +48,13 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 
 		// Store the claims in the context
 		c.Set("claims", claims)
+
+		// If allowedRoles is empty, just check that the user is authenticated
+		if len(allowedRoles) == 0 {
+			// No role check needed, proceed
+			c.Next()
+			return
+		}
 
 		// Check if the user's role is allowed
 		for _, role := range allowedRoles {
