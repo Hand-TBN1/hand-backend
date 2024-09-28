@@ -52,8 +52,8 @@ func main() {
         log.Println("Failed Connect")
     }
 
-    midtransClient := config.SetupMidtrans()
-    paymentService := services.NewPaymentService(midtransClient)
+    config.SetupMidtrans()
+    paymentService := &services.PaymentService{}
 
     engine := config.NewGin()
     engine.Use(middleware.CORS())

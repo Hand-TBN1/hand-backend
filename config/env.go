@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/midtrans/midtrans-go"
 )
 
 type environmentVariables struct {
@@ -22,6 +24,7 @@ type environmentVariables struct {
 	ApiPort          string
 	MidtransClientKey string
 	MidtransServerKey string
+	MidtransEnvironment midtrans.EnvironmentType
 }
 
 var Env *environmentVariables
@@ -51,6 +54,7 @@ func LoadEnv() {
 
 	env.MidtransClientKey = os.Getenv("MIDTRANS_CLIENT_KEY")
 	env.MidtransServerKey = os.Getenv("MIDTRANS_SERVER_KEY")
+	env.MidtransEnvironment = midtrans.Sandbox
 	if env.MidtransClientKey == "" || env.MidtransServerKey == "" {
 		log.Fatal("Midtrans keys are not set")
 	}
