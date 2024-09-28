@@ -16,7 +16,7 @@ const (
 
 type Therapist struct {
 	ID              uuid.UUID        `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-	UserID          uuid.UUID        `gorm:"type:uuid;not null;foreignKey:UserID"`
+	UserID          uuid.UUID        `gorm:"type:uuid;not null;foreignKey:UserID;unique"`
 	User            *User             `gorm:"foreignKey:UserID"`
 	Location        string
 	Specialization  string
@@ -25,5 +25,4 @@ type Therapist struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 
-	Appointments    []Appointment    `gorm:"foreignKey:TherapistID"`
 }
