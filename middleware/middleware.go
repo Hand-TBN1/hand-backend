@@ -1,9 +1,8 @@
 package middleware
 
 import (
-	"fmt"
+	"log"
 	"net/http"
-	"strings"
 
 	"github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/utilities"
@@ -12,64 +11,65 @@ import (
 
 // RoleMiddleware checks if the user is authenticated and optionally verifies their role.
 func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Extract the token from the Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-				WithStatus(http.StatusUnauthorized).
-				WithMessage("Authorization header missing").
-				Build())
-			c.Abort()
-			return
-		}
+    return func(c *gin.Context) {
+        // Extract the JWT from the "auth_token" HTTP-only cookie
+		log.Println(c)
+        token, err := c.Request.Cookie("authToken")
+		log.Println(token)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
+                WithStatus(http.StatusUnauthorized).
+                WithMessage("Authorization token missing").
+                Build())
+            c.Abort()
+            return
+        }
 
-		// Split "Bearer token"
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-				WithStatus(http.StatusUnauthorized).
-				WithMessage("Invalid token format").
-				Build())
-			c.Abort()
-			return
-		}
+        // Validate the token
+        claims, err := utilities.ValidateJWT(token.Value)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
+                WithStatus(http.StatusUnauthorized).
+                WithMessage("Invalid token").
+                Build())
+            c.Abort()
+            return
+        }
 
-		// Validate the token
-		claims, err := utilities.ValidateJWT(tokenParts[1])
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-				WithStatus(http.StatusUnauthorized).
-				WithMessage("Invalid token").
-				Build())
-			c.Abort()
-			return
-		}
+        // Store the claims in the context for future use
+        c.Set("claims", claims)
 
-		// Store the claims in the context
-		c.Set("claims", claims)
+        // Extract the user's role from the "user_role" cookie
+        userRole, err := c.Request.Cookie("user_role")
+        if err != nil {
+            c.JSON(http.StatusForbidden, apierror.NewApiErrorBuilder().
+                WithStatus(http.StatusForbidden).
+                WithMessage("User role not found").
+                Build())
+            c.Abort()
+            return
+        }
 
-		// If allowedRoles is empty, just check that the user is authenticated
-		if len(allowedRoles) == 0 {
-			// No role check needed, proceed
-			c.Next()
-			return
-		}
+        // If no roles are specified, just check if the user is authenticated
+        if len(allowedRoles) == 0 {
+            // Proceed since no role check is needed
+            c.Next()
+            return
+        }
 
-		// Check if the user's role is allowed
-		for _, role := range allowedRoles {
-			fmt.Printf("User role from token: %s, Allowed role: %s\n", claims.Role, role)
-			if role == claims.Role {
-				c.Next()
-				return
-			}
-		}
+        // Check if the user's role matches any of the allowed roles
+        for _, role := range allowedRoles {
+            if role == userRole.Value {
+                c.Next()
+                return
+            }
+        }
 
-		// If the role doesn't match any allowed roles, return forbidden
-		c.JSON(http.StatusForbidden, apierror.NewApiErrorBuilder().
-			WithStatus(http.StatusForbidden).
-			WithMessage("Forbidden: You don't have access to this resource").
-			Build())
-		c.Abort()
-	}
+        // If the user's role is not allowed, return a "Forbidden" response
+        c.JSON(http.StatusForbidden, apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusForbidden).
+            WithMessage("Forbidden: You don't have access to this resource").
+            Build())
+        c.Abort()
+    }
 }
