@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -155,4 +156,81 @@ func (service *TherapistService) AddUser(user *models.User) *apierror.ApiError {
 			Build()
 	}
 	return nil
+}
+
+
+func (service *TherapistService) GetTherapistDetails(therapistID string) (*models.Therapist, error) {
+	var therapist models.Therapist
+	// Preload the associated User to retrieve details like role, name, etc.
+	if err := service.DB.Preload("User").Where("user_id = ?", therapistID).First(&therapist).Error; err != nil {
+		return nil, errors.New("therapist not found")
+	}
+	return &therapist, nil
+}
+
+
+// GetAvailableSchedules fetches available schedules for a therapist
+func (service *TherapistService) GetAvailableSchedules(therapistID, date, consultationType string) ([]string, error) {
+	var appointments []models.Appointment
+
+	// Parse the provided date or default to today's date
+	parsedDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		parsedDate = time.Now() // Default to today if parsing fails
+	}
+
+	// Query successful appointments for the therapist on the given date and consultation type
+	if err := service.DB.Where("therapist_id = ? AND type = ? AND status = ? AND DATE(appointment_date) = ?", therapistID, models.ConsultationType(consultationType), models.Success, parsedDate).Find(&appointments).Error; err != nil {
+		return nil, errors.New("error fetching appointments")
+	}
+
+	// Define time slots (e.g., 8 AM to 11 AM, 1 PM to 5 PM)
+	timeSlots := generateTimeSlots(parsedDate)
+
+	// Loop through time slots and check if there's an appointment that blocks the slot
+	availableSlots := filterAvailableSlots(timeSlots, appointments)
+
+	return availableSlots, nil
+}
+
+// Helper function to generate time slots between 8 AM - 11 AM and 1 PM - 5 PM
+func generateTimeSlots(date time.Time) []time.Time {
+	var slots []time.Time
+
+	// 8 AM to 11 AM slots
+	for hour := 8; hour <= 10; hour++ {
+		slots = append(slots, time.Date(date.Year(), date.Month(), date.Day(), hour, 0, 0, 0, time.Local))
+	}
+
+	// 1 PM to 5 PM slots
+	for hour := 13; hour <= 16; hour++ {
+		slots = append(slots, time.Date(date.Year(), date.Month(), date.Day(), hour, 0, 0, 0, time.Local))
+	}
+
+	return slots
+}
+
+// Helper function to filter available time slots based on existing appointments
+func filterAvailableSlots(timeSlots []time.Time, appointments []models.Appointment) []string {
+	var availableSlots []string
+
+	for _, slot := range timeSlots {
+		isAvailable := true
+
+		for _, appointment := range appointments {
+			appointmentStart := appointment.AppointmentDate
+
+			// Compare the time slot with the appointment's start time
+			if appointmentStart.Equal(slot) {
+				isAvailable = false
+				break
+			}
+		}
+
+		if isAvailable {
+			availableSlots = append(availableSlots, slot.Format("15:04")) // Format as "HH:MM"
+		}
+	}
+
+	return availableSlots
 }
