@@ -52,8 +52,8 @@ func main() {
         log.Println("Failed Connect")
     }
 
-    midtransClient := config.SetupMidtrans()
-    paymentService := services.NewPaymentService(midtransClient)
+    config.SetupMidtrans()
+    paymentService := &services.PaymentService{}
 
     engine := config.NewGin()
     engine.Use(middleware.CORS())
@@ -62,11 +62,11 @@ func main() {
     routes.RegisterCheckInRoutes(engine, db)
     routes.RegisterMedicationRoutes(engine, db)
     routes.RegisterMediaRoutes(engine, db)
-    routes.RegisterMedicationTransactionHistoryRoutes(engine, db)
+    routes.RegisterMedicationTransactionHistoryRoutes(engine, db, paymentService)
     routes.RegisterTherapistRoutes(engine, db)
     routes.SetupPaymentRoutes(engine, paymentService)  
     routes.RegisterUserRoutes(engine, db)  
-    routes.RegisterAppointmentRoutes(engine, db)  
+    routes.RegisterAppointmentRoutes(engine, db,paymentService)  
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {
