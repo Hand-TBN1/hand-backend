@@ -1,35 +1,30 @@
 package services
 
 import (
-	"github.com/veritrans/go-midtrans"
+	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/snap"
 )
 
-type PaymentService struct {
-	MidtransClient midtrans.Client
-}
+type PaymentService struct{}
 
-func NewPaymentService(client midtrans.Client) *PaymentService {
-	return &PaymentService{
-		MidtransClient: client,
-	}
-}
-
-func (service *PaymentService) CreatePayment(orderID string, grossAmount int64) (*midtrans.SnapResponse, error) {
-	snapGateway := midtrans.SnapGateway{
-		Client: service.MidtransClient,
-	}
-
-	req := &midtrans.SnapReq{
+// CreatePayment handles the creation of a payment request using Snap
+func (service *PaymentService) CreatePayment(orderID string, grossAmount int64) (*snap.Response, error) {
+	req := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
 			OrderID:  orderID,
 			GrossAmt: grossAmount,
 		},
+		Expiry: &snap.ExpiryDetails{
+			Unit:     "minute",
+			Duration: 5,
+		},
 	}
 
-	resp, err := snapGateway.GetToken(req)
+	// Create transaction using the globally set ServerKey and Environment
+	resp, err := snap.CreateTransaction(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return &resp, nil
+	return resp, nil
 }
