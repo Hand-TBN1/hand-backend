@@ -82,3 +82,8 @@ func (service *CheckInService) UpdateCheckInByUserIDAndDate(userID uuid.UUID, da
 			"updated_at": updatedCheckIn.UpdatedAt,
 		}).Error
 }
+
+func (service *CheckInService) CheckTodayCheckIn(userID uuid.UUID) (*models.CheckIn, error) {
+    today := time.Now().UTC().Format("2006-01-02") 
+    return service.FindCheckInByUserIDAndDate(userID, today)
+}
