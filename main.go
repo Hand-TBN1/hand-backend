@@ -30,6 +30,7 @@ func main() {
         &models.PositiveAffirmation{},
         &models.EmergencyHistory{},
         &models.Media{},
+        &models.Journal{},
         &models.Availability{},
         &models.PersonalHealthPlan{},
         &models.Appointment{},
@@ -67,6 +68,7 @@ func main() {
     routes.SetupPaymentRoutes(engine, paymentService)  
     routes.RegisterUserRoutes(engine, db)  
     routes.RegisterAppointmentRoutes(engine, db,paymentService)  
+    routes.RegisterJournalRoutes(engine, db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {

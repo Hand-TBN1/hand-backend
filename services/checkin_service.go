@@ -79,6 +79,7 @@ func (service *CheckInService) UpdateCheckInByUserIDAndDate(userID uuid.UUID, da
 		Updates(map[string]interface{}{
 			"mood_score": updatedCheckIn.MoodScore,
 			"notes":      updatedCheckIn.Notes,
+			"feelings" : updatedCheckIn.Feelings,
 			"updated_at": updatedCheckIn.UpdatedAt,
 		}).Error
 }
