@@ -13,23 +13,26 @@ import (
 )
 
 type CreateCheckInDTO struct {
-	MoodScore int       `json:"mood_score" binding:"required"` 
+	MoodScore int       `json:"mood_score" binding:"required"`
 	Notes     string    `json:"notes"`
+	Feelings  string    `json:"feelings"`
 }
 
 type UpdateCheckInDTO struct {
-	MoodScore int    `json:"mood_score"` 
+	MoodScore int    `json:"mood_score"`
 	Notes     string `json:"notes"`
+	Feelings  string `json:"feelings"`
 }
 
 type CheckInResponseDTO struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uuid.UUID `json:"user_id"`
-	MoodScore  int       `json:"mood_score"` 
-	Notes      string    `json:"notes"`
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"user_id"`
+	MoodScore   int       `json:"mood_score"`
+	Notes       string    `json:"notes"`
+	Feelings    string    `json:"feelings"`
 	CheckInDate time.Time `json:"check_in_date"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type CheckInController struct {
@@ -61,6 +64,7 @@ func (ctrl *CheckInController) CreateCheckIn(c *gin.Context) {
 		UserID:     userUUID, 
 		MoodScore:  createDTO.MoodScore,
 		Notes:      createDTO.Notes,
+		Feelings:   createDTO.Feelings,
 		CheckInDate: time.Now(),
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -76,6 +80,7 @@ func (ctrl *CheckInController) CreateCheckIn(c *gin.Context) {
 		UserID:     checkIn.UserID,
 		MoodScore:  checkIn.MoodScore,
 		Notes:      checkIn.Notes,
+		Feelings: 	checkIn.Feelings,
 		CheckInDate: checkIn.CheckInDate,
 		CreatedAt:  checkIn.CreatedAt,
 		UpdatedAt:  checkIn.UpdatedAt,
@@ -122,7 +127,6 @@ func (ctrl *CheckInController) GetAllCheckIns(c *gin.Context) {
 }
 
 func (ctrl *CheckInController) UpdateCheckIn(c *gin.Context) {
-	// Extract userID from JWT claims
 	claims, exists := c.Get("claims")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
@@ -136,7 +140,6 @@ func (ctrl *CheckInController) UpdateCheckIn(c *gin.Context) {
 		return
 	}
 
-	// Get today's date
 	today := time.Now().UTC().Format("2006-01-02")
 
 	var updateDTO UpdateCheckInDTO
@@ -145,7 +148,6 @@ func (ctrl *CheckInController) UpdateCheckIn(c *gin.Context) {
 		return
 	}
 
-	// Step 1: Find the check-in by userID and today's date in UTC
 	checkIn, err := ctrl.CheckInService.FindCheckInByUserIDAndDate(userUUID, today)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -156,12 +158,11 @@ func (ctrl *CheckInController) UpdateCheckIn(c *gin.Context) {
 		return
 	}
 
-	// Step 2: Update the check-in's mood score and notes
 	checkIn.MoodScore = updateDTO.MoodScore
 	checkIn.Notes = updateDTO.Notes
+	checkIn.Feelings = updateDTO.Feelings
 	checkIn.UpdatedAt = time.Now().UTC()
 
-	// Step 3: Save the updated check-in
 	if err := ctrl.CheckInService.UpdateCheckInByUserIDAndDate(userUUID, today, *checkIn); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -169,3 +170,42 @@ func (ctrl *CheckInController) UpdateCheckIn(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Check-in updated successfully"})
 }
+
+func (ctrl *CheckInController) CheckTodayCheckIn(c *gin.Context) {
+    claims, exists := c.Get("claims")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+        return
+    }
+
+    userClaims := claims.(*utilities.Claims)
+    userUUID, err := uuid.Parse(userClaims.UserID)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID in token"})
+        return
+    }
+
+    checkIn, err := ctrl.CheckInService.CheckTodayCheckIn(userUUID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"error": "No check-in found for today"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    responseDTO := CheckInResponseDTO{
+        ID:          checkIn.ID,
+        UserID:      checkIn.UserID,
+        MoodScore:   checkIn.MoodScore,
+        Notes:       checkIn.Notes,
+        Feelings:    checkIn.Feelings,
+        CheckInDate: checkIn.CheckInDate,
+        CreatedAt:   checkIn.CreatedAt,
+        UpdatedAt:   checkIn.UpdatedAt,
+    }
+
+    c.JSON(http.StatusOK, responseDTO)
+}
+

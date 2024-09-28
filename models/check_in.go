@@ -11,6 +11,7 @@ type CheckIn struct {
     UserID      uuid.UUID `gorm:"type:uuid;not null"`
     MoodScore  int
     Notes      string
+    Feelings   string
     CheckInDate time.Time
     CreatedAt  time.Time
     UpdatedAt  time.Time

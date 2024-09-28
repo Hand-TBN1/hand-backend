@@ -86,7 +86,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		false,         
 	)
 	
-	c.SetCookie(
+	c.SetCookie(	
 		"user_role",  
 		string(user.Role),         
 		60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
@@ -97,6 +97,7 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 	)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
+		"token" : token,
 	})
 }
 
