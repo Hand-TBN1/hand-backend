@@ -13,12 +13,6 @@ type MedicationTransactionHistoryService struct {
 	DB *gorm.DB
 }
 
-type CheckoutItem struct {
-	MedicationID uuid.UUID
-	Price int64
-	Quantity  int 
-}
-
 // GetMedicationHistoryByUserID fetches the medication transaction history for a specific user
 func (service *MedicationTransactionHistoryService) GetMedicationHistoryByUserID(userID uuid.UUID) ([]models.MedicationHistoryTransaction, error) {
 	var history []models.MedicationHistoryTransaction
@@ -42,6 +36,7 @@ func (service *MedicationTransactionHistoryService) CreateMedicationTransaction(
         mhItem := models.MedicationHistoryItem{
             TransactionID:  transaction.ID,
             MedicationID:   item.MedicationID,
+			Name: item.Name,
             Quantity:       item.Quantity,
             PricePerItem:   item.Price,
         }
