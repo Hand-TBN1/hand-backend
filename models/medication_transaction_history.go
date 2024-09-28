@@ -6,12 +6,22 @@ import (
 	"github.com/google/uuid"
 )
 
+type MidtransStatus string
+
+var (
+	MidtransStatusChallenge MidtransStatus = "challenge"
+	MidtransStatusSuccess   MidtransStatus = "success"
+	MidtransStatusFailure   MidtransStatus = "failure"
+	MidtransStatusPending   MidtransStatus = "pending"
+)
+
 
 type MedicationHistoryTransaction struct {
 	ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
 	UserID          uuid.UUID `gorm:"type:uuid;not null"` 
 	User            User      `gorm:"foreignKey:UserID"` 
 	TotalPrice      int64     `gorm:"not null"`    
+	PaymentStatus   MidtransStatus `gorm:"type:midtrans_status;not null"`
 	TransactionDate time.Time `gorm:"not null"` 
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
