@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRoutes(router *gin.Engine, db *gorm.DB) {
+func SetupAuthRoutes(router *gin.Engine, db *gorm.DB) {
 	// Initialize services
 	authService := &services.AuthService{DB: db}
 	authController := &controller.AuthController{AuthService: authService}

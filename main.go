@@ -3,10 +3,12 @@ package main
 import (
 	"log"
 	"os"
-	"github.com/Hand-TBN1/hand-backend/middleware"
+
 	"github.com/Hand-TBN1/hand-backend/config"
+	"github.com/Hand-TBN1/hand-backend/middleware"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/routes"
+	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/joho/godotenv"
 )
 
@@ -22,18 +24,20 @@ func main() {
     db := config.NewPostgresql(
         &models.User{},
         &models.Therapist{},
-        &models.BookedSchedule{},
         &models.CheckIn{},
         &models.ChatMessage{},
         &models.ChatRoom{},
         &models.PositiveAffirmation{},
         &models.EmergencyHistory{},
         &models.Media{},
+        &models.Availability{},
         &models.PersonalHealthPlan{},
         &models.Appointment{},
         &models.ConsultationHistory{},
         &models.Medication{},
         &models.Prescription{},
+        &models.MedicationHistoryTransaction{},
+        &models.MedicationHistoryItem{},
     )
 
     redisClient := config.NewRedis()
@@ -48,13 +52,20 @@ func main() {
         log.Println("Failed Connect")
     }
 
+    midtransClient := config.SetupMidtrans()
+    paymentService := services.NewPaymentService(midtransClient)
+
     engine := config.NewGin()
     engine.Use(middleware.CORS())
 
-    routes.SetupRoutes(engine, db)
+    routes.SetupAuthRoutes(engine, db)
     routes.RegisterCheckInRoutes(engine, db)
     routes.RegisterMedicationRoutes(engine, db)
     routes.RegisterMediaRoutes(engine, db)
+    routes.RegisterMedicationTransactionHistoryRoutes(engine, db)
+    routes.RegisterTherapistRoutes(engine, db)
+    routes.SetupPaymentRoutes(engine, paymentService)  
+    routes.RegisterUserRoutes(engine, db)  
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(":" + config.Env.ApiPort); err != nil {

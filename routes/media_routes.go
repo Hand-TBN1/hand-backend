@@ -17,7 +17,7 @@ func RegisterMediaRoutes(router *gin.Engine, db *gorm.DB) {
 		adminTherapistRoutes := api.Group("/media")
 		adminTherapistRoutes.Use(middleware.RoleMiddleware("admin", "therapist"))
 		{
-			adminTherapistRoutes.POST("", mediaController.CreateMedia)
+			adminTherapistRoutes.POST("/create", mediaController.CreateMedia)
 			adminTherapistRoutes.PUT("/:id", mediaController.UpdateMedia)
 			adminTherapistRoutes.DELETE("/:id", mediaController.DeleteMedia)
 		}

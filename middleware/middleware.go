@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RoleMiddleware checks if the user has one of the required roles
+// RoleMiddleware checks if the user is authenticated and optionally verifies their role.
 func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract the token from the Authorization header
@@ -45,10 +46,20 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 			return
 		}
 
+		// Store the claims in the context
+		c.Set("claims", claims)
+
+		// If allowedRoles is empty, just check that the user is authenticated
+		if len(allowedRoles) == 0 {
+			// No role check needed, proceed
+			c.Next()
+			return
+		}
+
 		// Check if the user's role is allowed
-		userRole := claims.Role
 		for _, role := range allowedRoles {
-			if role == userRole {
+			fmt.Printf("User role from token: %s, Allowed role: %s\n", claims.Role, role)
+			if role == claims.Role {
 				c.Next()
 				return
 			}
@@ -62,55 +73,3 @@ func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
 		c.Abort()
 	}
 }
-
-
-func Authenticate(allowedRoles ...string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Extract the token from the Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-				WithStatus(http.StatusUnauthorized).
-				WithMessage("Authorization header missing").
-				Build())
-			c.Abort()
-			return
-		}
-
-		// Split "Bearer token"
-		tokenParts := strings.Split(authHeader, " ")
-		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-				WithStatus(http.StatusUnauthorized).
-				WithMessage("Invalid token format").
-				Build())
-			c.Abort()
-			return
-		}
-
-		// Validate the token
-		claims, err := utilities.ValidateJWT(tokenParts[1])
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-				WithStatus(http.StatusUnauthorized).
-				WithMessage("Invalid token").
-				Build())
-			c.Abort()
-			return
-		}
-
-		// Check if the user's role is allowed
-		c.Set("user.id", claims.UserID)
-		c.Set("user.name", claims.Name)
-		c.Set("user.role", claims.Role)
-		c.Next()
-	}
-}
-
-
-// Contoh Penggunaan
-// router.Use(middleware.RoleMiddleware("admin", "therapist")) // Allow only admin and therapist
-// 	{
-// 		// Protected routes that only admin and therapist can access
-// 		protected.GET("/some-endpoint", someHandler)
-// 	}

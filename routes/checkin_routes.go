@@ -15,9 +15,11 @@ func RegisterCheckInRoutes(router *gin.Engine, db *gorm.DB) {
 	api := router.Group("/api")
 	apiPatients := api.Group("/checkins", middleware.RoleMiddleware("patient"))
 	{
+		apiPatients.PUT("", checkInController.UpdateCheckIn)
 		apiPatients.POST("/create", checkInController.CreateCheckIn)
 		apiPatients.GET("/:id", checkInController.GetCheckIn)
 		apiPatients.GET("", checkInController.GetAllCheckIns)
-		apiPatients.PUT("/:id", checkInController.UpdateCheckIn)
+		apiPatients.GET("/ischeckin", checkInController.CheckTodayCheckIn);
+		
 	}
 }

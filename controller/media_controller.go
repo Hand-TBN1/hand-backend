@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/Hand-TBN1/hand-backend/models"
@@ -11,23 +10,18 @@ import (
 	"github.com/google/uuid"
 )
 
-var allowedTypes = map[string]bool{
-	"video":   true,
-	"article": true,
-}
-
 type CreateMediaDTO struct {
-	Type        string `json:"type" binding:"required"`
-	Title       string `json:"title" binding:"required"`
-	Content     string `json:"content" binding:"required"`
-	ThumbnailURL string `json:"image_url"`
+	Type        models.MediaType `json:"type" binding:"required"`
+	Title       string           `json:"title" binding:"required"`
+	Content     string           `json:"content" binding:"required"`
+	ThumbnailURL string          `json:"image_url"`
 }
 
 type UpdateMediaDTO struct {
-	Type        string `json:"type" binding:"required"`
-	Title       string `json:"title" binding:"required"`
-	Content     string `json:"content" binding:"required"`
-	ThumbnailURL string `json:"image_url"`
+	Type        models.MediaType `json:"type" binding:"required"`
+	Title       string           `json:"title" binding:"required"`
+	Content     string           `json:"content" binding:"required"`
+	ThumbnailURL string          `json:"image_url"`
 }
 
 type MediaController struct {
@@ -39,11 +33,6 @@ func (ctrl *MediaController) CreateMedia(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if !allowedTypes[strings.ToLower(dto.Type)] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media type. Only 'video' or 'article' are allowed."})
 		return
 	}
 
@@ -93,11 +82,6 @@ func (ctrl *MediaController) UpdateMedia(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&dto); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
-		return
-	}
-
-	if !allowedTypes[strings.ToLower(dto.Type)] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid media type. Only 'video' or 'article' are allowed."})
 		return
 	}
 

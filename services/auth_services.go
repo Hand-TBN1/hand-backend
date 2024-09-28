@@ -25,6 +25,13 @@ func (service *AuthService) Register(user *models.User) *apierror.ApiError {
 			Build()
 	}
 
+	if user.Role != models.Patient {
+		return apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusBadRequest).
+			WithMessage("Only users with role patient can register").
+			Build()
+	}
+
 	// Hash the password before saving
 	hashedPassword, err := utilities.HashPassword(user.Password)
 	if err != nil {
@@ -33,6 +40,7 @@ func (service *AuthService) Register(user *models.User) *apierror.ApiError {
 			WithMessage("Failed to hash password").
 			Build()
 	}
+
 	user.Password = hashedPassword
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()

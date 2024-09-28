@@ -4,31 +4,35 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/services"
+	"github.com/Hand-TBN1/hand-backend/utilities"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type CreateCheckInDTO struct {
-	UserID    uuid.UUID `json:"user_id" binding:"required"`
-	MoodScore string    `json:"mood_score" binding:"required"`
+	MoodScore int       `json:"mood_score" binding:"required"`
 	Notes     string    `json:"notes"`
+	Feelings  string    `json:"feelings"`
 }
 
 type UpdateCheckInDTO struct {
-	MoodScore string `json:"mood_score"`
+	MoodScore int    `json:"mood_score"`
 	Notes     string `json:"notes"`
+	Feelings  string `json:"feelings"`
 }
 
 type CheckInResponseDTO struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uuid.UUID `json:"user_id"`
-	MoodScore  string    `json:"mood_score"`
-	Notes      string    `json:"notes"`
+	ID          uuid.UUID `json:"id"`
+	UserID      uuid.UUID `json:"user_id"`
+	MoodScore   int       `json:"mood_score"`
+	Notes       string    `json:"notes"`
+	Feelings    string    `json:"feelings"`
 	CheckInDate time.Time `json:"check_in_date"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  time.Time  `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type CheckInController struct {
@@ -36,6 +40,19 @@ type CheckInController struct {
 }
 
 func (ctrl *CheckInController) CreateCheckIn(c *gin.Context) {
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+		return
+	}
+
+	userClaims := claims.(*utilities.Claims) 
+	userUUID, err := uuid.Parse(userClaims.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID in token"})
+		return
+	}
+
 	var createDTO CreateCheckInDTO
 	if err := c.ShouldBindJSON(&createDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -44,9 +61,10 @@ func (ctrl *CheckInController) CreateCheckIn(c *gin.Context) {
 
 	checkIn := models.CheckIn{
 		ID:         uuid.New(),
-		UserID:     createDTO.UserID,
+		UserID:     userUUID, 
 		MoodScore:  createDTO.MoodScore,
 		Notes:      createDTO.Notes,
+		Feelings:   createDTO.Feelings,
 		CheckInDate: time.Now(),
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -62,6 +80,7 @@ func (ctrl *CheckInController) CreateCheckIn(c *gin.Context) {
 		UserID:     checkIn.UserID,
 		MoodScore:  checkIn.MoodScore,
 		Notes:      checkIn.Notes,
+		Feelings: 	checkIn.Feelings,
 		CheckInDate: checkIn.CheckInDate,
 		CreatedAt:  checkIn.CreatedAt,
 		UpdatedAt:  checkIn.UpdatedAt,
@@ -78,7 +97,7 @@ func (ctrl *CheckInController) GetCheckIn(c *gin.Context) {
 	c.JSON(http.StatusOK, CheckInResponseDTO{
 		ID:         checkIn.ID,
 		UserID:     checkIn.UserID,
-		MoodScore:  checkIn.MoodScore,
+		MoodScore:  checkIn.MoodScore, 
 		Notes:      checkIn.Notes,
 		CheckInDate: checkIn.CheckInDate,
 		CreatedAt:  checkIn.CreatedAt,
@@ -108,22 +127,85 @@ func (ctrl *CheckInController) GetAllCheckIns(c *gin.Context) {
 }
 
 func (ctrl *CheckInController) UpdateCheckIn(c *gin.Context) {
-	id := c.Param("id")
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+		return
+	}
+
+	userClaims := claims.(*utilities.Claims)
+	userUUID, err := uuid.Parse(userClaims.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID in token"})
+		return
+	}
+
+	today := time.Now().UTC().Format("2006-01-02")
+
 	var updateDTO UpdateCheckInDTO
 	if err := c.ShouldBindJSON(&updateDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	checkIn := models.CheckIn{
-		MoodScore:  updateDTO.MoodScore,
-		Notes:      updateDTO.Notes,
-		UpdatedAt:  time.Now(),
-	}
-
-	if err := ctrl.CheckInService.UpdateCheckIn(id, checkIn); err != nil {
+	checkIn, err := ctrl.CheckInService.FindCheckInByUserIDAndDate(userUUID, today)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "No check-in found for today"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.Status(http.StatusOK)
+
+	checkIn.MoodScore = updateDTO.MoodScore
+	checkIn.Notes = updateDTO.Notes
+	checkIn.Feelings = updateDTO.Feelings
+	checkIn.UpdatedAt = time.Now().UTC()
+
+	if err := ctrl.CheckInService.UpdateCheckInByUserIDAndDate(userUUID, today, *checkIn); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Check-in updated successfully"})
 }
+
+func (ctrl *CheckInController) CheckTodayCheckIn(c *gin.Context) {
+    claims, exists := c.Get("claims")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+        return
+    }
+
+    userClaims := claims.(*utilities.Claims)
+    userUUID, err := uuid.Parse(userClaims.UserID)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID in token"})
+        return
+    }
+
+    checkIn, err := ctrl.CheckInService.CheckTodayCheckIn(userUUID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"error": "No check-in found for today"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    responseDTO := CheckInResponseDTO{
+        ID:          checkIn.ID,
+        UserID:      checkIn.UserID,
+        MoodScore:   checkIn.MoodScore,
+        Notes:       checkIn.Notes,
+        Feelings:    checkIn.Feelings,
+        CheckInDate: checkIn.CheckInDate,
+        CreatedAt:   checkIn.CreatedAt,
+        UpdatedAt:   checkIn.UpdatedAt,
+    }
+
+    c.JSON(http.StatusOK, responseDTO)
+}
+

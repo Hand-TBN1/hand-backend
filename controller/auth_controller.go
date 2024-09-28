@@ -34,7 +34,7 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
-// Login a user and return JWT token
+// Login a user and return JWT token in an HTTP-only cookie
 func (ctrl *AuthController) Login(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email"`
@@ -56,9 +56,48 @@ func (ctrl *AuthController) Login(c *gin.Context) {
 		return
 	}
 
+	// Set JWT as HTTP-only cookie
+	c.SetCookie(
+		"auth_token",  
+		token,         
+		60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		"/",           // Cookie path
+		"",            // Domain (empty means default, based on request domain)
+		true,          // Secure (set to true for HTTPS)
+		true,          // HTTPOnly (prevents access from JavaScript)
+	)
+
+	c.SetCookie(
+		"user_id",  
+		user.ID.String(),         
+		60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		"/",           
+		"",            
+		false,         // Not HTTP-only 
+		false,         
+	)
+	c.SetCookie(
+		"user_name",  
+		user.Name,         
+		60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		"/",           
+		"",            
+		false,         // Not HTTP-only 
+		false,         
+	)
+	
+	c.SetCookie(	
+		"user_role",  
+		string(user.Role),         
+		60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		"/",           
+		"",            
+		false,         // Not HTTP-only
+		false,         
+	)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
-		"token":   token,
-		"user":    gin.H{"id": user.ID, "name": user.Name, "role": user.Role},
+		"token" : token,
 	})
 }
+

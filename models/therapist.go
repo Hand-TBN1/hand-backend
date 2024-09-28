@@ -6,15 +6,24 @@ import (
 	"github.com/google/uuid"
 )
 
-type Therapist struct {
-    ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    UserID          uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
-    Specialization  string
-    AppointmentRate int64
-    CreatedAt       time.Time
-    UpdatedAt       time.Time
+type ConsultationType string
 
-    // Associations
-    BookedSchedules []BookedSchedule `gorm:"foreignKey:TherapistID"`
-    Appointments    []Appointment    `gorm:"foreignKey:TherapistID"`
+const (
+	Online  ConsultationType = "online"
+	Offline ConsultationType = "offline"
+	Hybrid  ConsultationType = "hybrid"
+)
+
+type Therapist struct {
+	ID              uuid.UUID        `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
+	UserID          uuid.UUID        `gorm:"type:uuid;not null;foreignKey:UserID"`
+	User            *User             `gorm:"foreignKey:UserID"`
+	Location        string
+	Specialization  string
+	Consultation    ConsultationType `gorm:"type:consultation_enum"`
+	AppointmentRate int64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+
+	Appointments    []Appointment    `gorm:"foreignKey:TherapistID"`
 }

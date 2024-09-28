@@ -14,16 +14,17 @@ type environmentVariables struct {
 	PostgresPassword string
 	PostgresDbName   string
 
-	RedisHost     string
-	RedisPort     string
-	RedisPassword string
-	RedisDatabase int
+	RedisHost        string
+	RedisPort        string
+	RedisPassword    string
+	RedisDatabase    int
 
-	ApiPort string
+	ApiPort          string
+	MidtransClientKey string
+	MidtransServerKey string
 }
 
 var Env *environmentVariables
-
 func LoadEnv() {
 	env := &environmentVariables{}
 	var err error
@@ -33,7 +34,6 @@ func LoadEnv() {
 	}
 
 	env.ApiPort = os.Getenv("API_PORT")
-
 
 	env.PostgresHost = os.Getenv("POSTGRES_HOST")
 	env.PostgresPort = os.Getenv("POSTGRES_PORT")
@@ -47,6 +47,12 @@ func LoadEnv() {
 	env.RedisDatabase, err = strconv.Atoi(os.Getenv("REDIS_DATABASE"))
 	if err != nil && env.ENV != "test" {
 		log.Fatal("Fail to parse REDIS_DATABASE")
+	}
+
+	env.MidtransClientKey = os.Getenv("MIDTRANS_CLIENT_KEY")
+	env.MidtransServerKey = os.Getenv("MIDTRANS_SERVER_KEY")
+	if env.MidtransClientKey == "" || env.MidtransServerKey == "" {
+		log.Fatal("Midtrans keys are not set")
 	}
 
 	Env = env
