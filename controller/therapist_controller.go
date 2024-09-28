@@ -163,3 +163,45 @@ func (ctrl *TherapistController) UpdateAvailability(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Availability updated successfully"})
 }
+
+
+func (ctrl *TherapistController) GetTherapistDetails(c *gin.Context) {
+	therapistID := c.Param("id")
+
+	therapist, err := ctrl.TherapistService.GetTherapistDetails(therapistID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Respond with both Therapist and User details
+	c.JSON(http.StatusOK, gin.H{
+		"therapist": gin.H{
+			"name":        therapist.User.Name,
+			"email":       therapist.User.Email,
+			"phone_number": therapist.User.PhoneNumber,
+			"image_url":   therapist.User.ImageURL,
+			"role":        therapist.User.Role,
+			"location":    therapist.Location,
+			"specialization": therapist.Specialization,
+			"consultation_type": therapist.Consultation,
+			"appointment_rate": therapist.AppointmentRate,
+		},
+	})
+}
+
+
+// GetTherapistSchedule - Fetch available schedule
+func (ctrl *TherapistController) GetTherapistSchedule(c *gin.Context) {
+	therapistID := c.Param("id")
+	date := c.Query("date") // Optional
+	consultationType := c.Query("type") // online/offline
+
+	schedules, err := ctrl.TherapistService.GetAvailableSchedules(therapistID, date, consultationType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Schedule not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"schedules": schedules})
+}
