@@ -16,8 +16,8 @@ const (
 
 type Appointment struct {
     ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    UserID          uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
-    TherapistID     uuid.UUID `gorm:"type:uuid;not null;foreignKey:UserID"`
+    UserID          uuid.UUID `gorm:"type:uuid;not null"`
+    TherapistID     uuid.UUID `gorm:"type:uuid;not null"`
     Type            ConsultationType `gorm:"type:consultation_enum"`
     Status         AppointmentScheduleStatus `gorm:"type:appointment_schedule_status_enum"`
     AppointmentDate time.Time
@@ -27,4 +27,5 @@ type Appointment struct {
     // Associations
     User       User  `gorm:"foreignKey:UserID"`
     Therapist  User  `gorm:"foreignKey:TherapistID"`
+    ConsultationHistory  ConsultationHistory  `gorm:"foreignKey:AppointmentID"`
 }

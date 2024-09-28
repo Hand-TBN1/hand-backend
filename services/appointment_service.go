@@ -10,6 +10,6 @@ type AppointmentService struct {
 }
 
 // CreateAppointment creates a new appointment for a user
-func (service *AppointmentService) CreateAppointment(appointment *models.Appointment) error {
+func (service *AppointmentService) CreateAppointment(appointment *models.Appointment) error {	
 	return service.DB.Create(appointment).Error
 }
