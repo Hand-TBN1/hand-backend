@@ -6,6 +6,7 @@ import (
 
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/services"
+	"github.com/Hand-TBN1/hand-backend/utilities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -22,7 +23,6 @@ func (ctrl *AppointmentController) CreateAppointment(c *gin.Context) {
 		ConsultationType string `json:"consultation_type"`
 	}
 
-	// Bind JSON to request struct
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
@@ -35,15 +35,22 @@ func (ctrl *AppointmentController) CreateAppointment(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(string) // Get user ID from JWT token or session
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
+	userClaims := claims.(*utilities.Claims)
+	defaultStatus := models.Success
 	// Create Appointment
 	appointment := models.Appointment{
 		ID:              uuid.New(),
-		UserID:          uuid.MustParse(userID),
+		UserID:          uuid.MustParse(userClaims.UserID),  // Get user_id directly from claims
 		TherapistID:     uuid.MustParse(req.TherapistID),
 		AppointmentDate: appointmentDate,
-		Type: models.ConsultationType(req.ConsultationType),
+		Type:            models.ConsultationType(req.ConsultationType),
+		Status:          defaultStatus,
 		CreatedAt:       time.Now(),
 	}
 
@@ -54,3 +61,4 @@ func (ctrl *AppointmentController) CreateAppointment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Appointment created successfully"})
 }
+
