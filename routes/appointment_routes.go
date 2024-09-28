@@ -9,9 +9,9 @@ import (
 )
 
 // RegisterAppointmentRoutes sets up the routes for managing appointments.
-func RegisterAppointmentRoutes(router *gin.Engine, db *gorm.DB) {
+func RegisterAppointmentRoutes(router *gin.Engine, db *gorm.DB, paymentService *services.PaymentService) {
 	appointmentService := &services.AppointmentService{DB: db}
-	appointmentController := &controller.AppointmentController{AppointmentService: appointmentService}
+	appointmentController := &controller.AppointmentController{AppointmentService: appointmentService,PaymentService: paymentService}
 
 	api := router.Group("/api/appointment")
 	{

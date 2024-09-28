@@ -8,12 +8,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterMedicationTransactionHistoryRoutes(router *gin.Engine, db *gorm.DB) {
+func RegisterMedicationTransactionHistoryRoutes(router *gin.Engine, db *gorm.DB, paymentService *services.PaymentService) {
 
 	medicationTransactionHistoryService := &services.MedicationTransactionHistoryService{DB: db}
 
 	medicationController := &controller.MedicationTransactionHistoryController{
 		MedicationTransactionHistoryService: medicationTransactionHistoryService,
+		PaymentService: paymentService,
 	}
 
 	// Medication transaction history routes
