@@ -71,7 +71,7 @@ func main() {
     routes.RegisterJournalRoutes(engine, db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
-    if err := engine.Run(":" + config.Env.ApiPort); err != nil {
+    if err := engine.Run(config.Env.ApiPort); err != nil {
         log.Fatalf("Failed to start server: %v\n", err)
     }
 }
