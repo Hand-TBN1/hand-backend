@@ -18,6 +18,9 @@ func (service *PaymentService) CreatePayment(orderID string, grossAmount int64) 
 			Unit:     "minute",
 			Duration: 5,
 		},
+		Callbacks: &snap.Callbacks{
+			Finish: "http://localhost:3000/appointment-history", 
+		},
 	}
 
 	// Create transaction using the globally set ServerKey and Environment
