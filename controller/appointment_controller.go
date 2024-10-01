@@ -57,7 +57,6 @@ func (ctrl *AppointmentController) CreateAppointment(c *gin.Context) {
 	}
 
 	userClaims := claims.(*utilities.Claims)
-	defaultStatus := models.Success
 
 	therapist, err := ctrl.TherapistService.GetTherapistDetails(req.TherapistID)
 	if err != nil {
@@ -77,7 +76,7 @@ func (ctrl *AppointmentController) CreateAppointment(c *gin.Context) {
 		Price:           therapist.AppointmentRate,
 		PaymentStatus:   models.MidtransStatusPending,
 		Type:            models.ConsultationType(req.ConsultationType),
-		Status:          defaultStatus,
+		Status:          models.Success, 
 		CreatedAt:       time.Now(),
 	}
 
@@ -105,7 +104,9 @@ func (ctrl *AppointmentController) CreateAppointment(c *gin.Context) {
 	// Respond with success and payment redirect URL
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Appointment created successfully",
-		"redirect_url": paymentResponse.RedirectURL,
+		"appointment_id": appointment.ID,
+		"payment_status": appointment.PaymentStatus,
+		"redirect_url": paymentResponse.RedirectURL, 
 	})
 }
 
