@@ -22,10 +22,39 @@ func (service *AppointmentService) GetAppointmentsByUserID(userID string, status
     if status != "" {
         query = query.Where("status = ?", status)
     }
+    query = query.Order("created_at desc")
 
     if err := query.Find(&appointments).Error; err != nil {
         return nil, err
     }
 
     return appointments, nil
+}
+
+// UpdatePaymentAndAppointmentStatus updates the payment and appointment status
+func (service *AppointmentService) UpdatePaymentAndAppointmentStatus(orderID string, status string) error {
+	var appointment models.Appointment
+
+	// Find the appointment by order ID
+	if err := service.DB.Where("id = ?", orderID).First(&appointment).Error; err != nil {
+		return err
+	}
+
+	// Update payment and appointment status based on Midtrans transaction status
+	switch status {
+	case "settlement":
+		appointment.PaymentStatus = models.MidtransStatusSuccess
+		appointment.Status = models.Success
+	case "expire":
+		appointment.PaymentStatus = models.MidtransStatusFailure
+		appointment.Status = models.Canceled
+	case "deny", "cancel", "failure":
+		appointment.PaymentStatus = models.MidtransStatusFailure
+		appointment.Status = models.Canceled
+	default:
+		appointment.PaymentStatus = models.MidtransStatusPending
+	}
+
+	// Save the updated appointment
+	return service.DB.Save(&appointment).Error
 }

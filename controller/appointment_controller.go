@@ -151,7 +151,7 @@ func (ctrl *AppointmentController) GetAppointmentHistory(c *gin.Context) {
 			"price":            appointment.Price,
 			"appointment_date": appointment.AppointmentDate,
 			"type":             appointment.Type,
-			"status":           appointment.Status,
+			"status":           appointment.PaymentStatus,
 			"payment_status":   appointment.PaymentStatus,
 		})
 	}
