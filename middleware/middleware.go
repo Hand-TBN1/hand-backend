@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"log"
+    "log"
 	"net/http"
+	"strings"
 
 	"github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/utilities"
@@ -11,65 +12,67 @@ import (
 
 // RoleMiddleware checks if the user is authenticated and optionally verifies their role.
 func RoleMiddleware(allowedRoles ...string) gin.HandlerFunc {
-    return func(c *gin.Context) {
-        // Extract the JWT from the "auth_token" HTTP-only cookie
-		log.Println(c)
-        token, err := c.Request.Cookie("authToken")
-		log.Println(token)
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-                WithStatus(http.StatusUnauthorized).
-                WithMessage("Authorization token missing").
-                Build())
-            c.Abort()
-            return
-        }
+	return func(c *gin.Context) {
+		// Extract the Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
+				WithStatus(http.StatusUnauthorized).
+				WithMessage("Authorization header missing").
+				Build())
+			c.Abort()
+			return
+		}
+        log.Println(authHeader);
 
-        // Validate the token
-        claims, err := utilities.ValidateJWT(token.Value)
-        if err != nil {
-            c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
-                WithStatus(http.StatusUnauthorized).
-                WithMessage("Invalid token").
-                Build())
-            c.Abort()
-            return
-        }
+		// Check if the token is a Bearer token
+		tokenParts := strings.Split(authHeader, " ")
+		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
+				WithStatus(http.StatusUnauthorized).
+				WithMessage("Invalid Authorization header format").
+				Build())
+			c.Abort()
+			return
+		}
 
-        // Store the claims in the context for future use
+		// Extract the token part
+		token := tokenParts[1]
+
+		// Validate the token
+		claims, err := utilities.ValidateJWT(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, apierror.NewApiErrorBuilder().
+				WithStatus(http.StatusUnauthorized).
+				WithMessage("Invalid token").
+				Build())
+			c.Abort()
+			return
+		}
+
         c.Set("claims", claims)
+		// Access the role from the claims struct
+		userRole := claims.Role
 
-        // Extract the user's role from the "user_role" cookie
-        userRole, err := c.Request.Cookie("user_role")
-        if err != nil {
-            c.JSON(http.StatusForbidden, apierror.NewApiErrorBuilder().
-                WithStatus(http.StatusForbidden).
-                WithMessage("User role not found").
-                Build())
-            c.Abort()
-            return
-        }
+		// If no roles are specified, just check if the user is authenticated
+		if len(allowedRoles) == 0 {
+			c.Next()
+			return
+		}
 
-        // If no roles are specified, just check if the user is authenticated
-        if len(allowedRoles) == 0 {
-            // Proceed since no role check is needed
-            c.Next()
-            return
-        }
+		// Check if the user's role matches any of the allowed roles
+		for _, role := range allowedRoles {
+			if role == userRole {
+				c.Next()
+				return
+			}
+		}
 
-        // Check if the user's role matches any of the allowed roles
-        for _, role := range allowedRoles {
-            if role == userRole.Value {
-                c.Next()
-                return
-            }
-        }
-
-        // If the user's role is not allowed, return a "Forbidden" response
-        c.JSON(http.StatusForbidden, apierror.NewApiErrorBuilder().
-            WithStatus(http.StatusForbidden).
-            WithMessage("Forbidden: You don't have access to this resource").
-            Build())
-        c.Abort()
-    }
+		// If the user's role is not allowed, return a "Forbidden" response
+		c.JSON(http.StatusForbidden, apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusForbidden).
+			WithMessage("Forbidden: You don't have access to this resource").
+			Build())
+		c.Abort()
+	}
 }
