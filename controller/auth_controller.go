@@ -56,45 +56,45 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 			return
 		}
 
-		// Set JWT as HTTP-only cookie
-		c.SetCookie(
-			"auth_token",  
-			token,         
-			60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-			"/",           // Cookie path
-			"",            // Domain (empty means default, based on request domain)
-			true,          // Secure (set to true for HTTPS)
-			true,          // HTTPOnly (prevents access from JavaScript)
-		)
+		// // Set JWT as HTTP-only cookie
+		// c.SetCookie(
+		// 	"auth_token",  
+		// 	token,         
+		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		// 	"/",           // Cookie path
+		// 	"",            // Domain (empty means default, based on request domain)
+		// 	true,          // Secure (set to true for HTTPS)
+		// 	true,          // HTTPOnly (prevents access from JavaScript)
+		// )
 
-		c.SetCookie(
-			"user_id",  
-			user.ID.String(),         
-			60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-			"/",           
-			"",            
-			false,         // Not HTTP-only 
-			false,         
-		)
-		c.SetCookie(
-			"user_name",  
-			user.Name,         
-			60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-			"/",           
-			"",            
-			false,         // Not HTTP-only 
-			false,         
-		)
+		// c.SetCookie(
+		// 	"user_id",  
+		// 	user.ID.String(),         
+		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		// 	"/",           
+		// 	"",            
+		// 	false,         // Not HTTP-only 
+		// 	false,         
+		// )
+		// c.SetCookie(
+		// 	"user_name",  
+		// 	user.Name,         
+		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		// 	"/",           
+		// 	"",            
+		// 	false,         // Not HTTP-only 
+		// 	false,         
+		// )
 		
-		c.SetCookie(	
-			"user_role",  
-			string(user.Role),         
-			60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-			"/",           
-			"",            
-			false,         // Not HTTP-only
-			false,         
-		)
+		// c.SetCookie(	
+		// 	"user_role",  
+		// 	string(user.Role),         
+		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
+		// 	"/",           
+		// 	"",            
+		// 	false,         // Not HTTP-only
+		// 	false,         
+		// )
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Login successful",
 			"token" : token,
