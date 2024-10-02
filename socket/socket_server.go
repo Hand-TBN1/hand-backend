@@ -81,13 +81,13 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 }
 
 func authenticateAndUpgrade(w http.ResponseWriter, r *http.Request) (string, *websocket.Conn, error) {
-    cookie, err := r.Cookie("authToken")
-    if err != nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return "", nil, err
+    token := r.URL.Query().Get("token")
+    if token == "" {
+        http.Error(w, "Unauthorized - Token not provided", http.StatusUnauthorized)
+        return "", nil, fmt.Errorf("no token provided")
     }
 
-    claims, err := utilities.ValidateJWT(cookie.Value)
+    claims, err := utilities.ValidateJWT(token)
     if err != nil {
         http.Error(w, "Unauthorized", http.StatusUnauthorized)
         return "", nil, err
@@ -130,6 +130,8 @@ func handleClientMessage(message []byte, userID string) {
         checkMatchStatus(userID)
     case "end_match":
         endMatch(userID)
+    case "cancel_find":
+        cancelFind(userID)
     default:
         log.Printf("Unknown event: %s", msg.Event)
     }
@@ -165,6 +167,9 @@ func findMatch(userID, data string) {
     } else {
         // No suitable match found, re-add to the queue
         redisClient.SAdd(ctx, "waitingQueue", serializedQueueData)
+        clients[userID].Queue = &queueData
+        redisClient.SAdd(ctx, "waitingQueue", matchedData)
+        clients[userID].Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "in_queue", "data": ""}`))
     }
 }
 
@@ -306,6 +311,47 @@ func checkMatchStatus(userID string) {
 		client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "free", "data": ""}`))
 	}
 }
+
+func cancelFind(userID string) {
+    clientsM.Lock()
+    client := clients[userID]
+    if client == nil || client.Queue == nil {
+        clientsM.Unlock()
+        return // Either user is not connected or not in any queue
+    }
+
+    // Attempt to remove the user from the Redis queue
+    ctx := context.Background()
+    queueMembers, err := redisClient.SMembers(ctx, "waitingQueue").Result()
+    if err != nil {
+        log.Printf("Error retrieving Redis queue for cancellation: %v", err)
+        client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "error", "data": "Queue access failed"}`))
+        clientsM.Unlock()
+        return
+    }
+
+    // Filter out this user's queue data
+    updatedQueue := make([]interface{}, 0)
+    for _, queueData := range queueMembers {
+        var queuedUser ClientQueue
+        if err := json.Unmarshal([]byte(queueData), &queuedUser); err == nil && queuedUser.UserID != userID {
+            updatedQueue = append(updatedQueue, queueData)
+        }
+    }
+
+    // Reset the waiting queue without this user
+    redisClient.Del(ctx, "waitingQueue")
+    if len(updatedQueue) > 0 {
+        redisClient.SAdd(ctx, "waitingQueue", updatedQueue...)
+    }
+
+    // Reset the client's queue status
+    client.Queue = nil
+    client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "cancel_find", "data": ""}`))
+
+    clientsM.Unlock()
+}
+
 
 func endMatch(userID string) {
     client, exists := clients[userID]
