@@ -36,8 +36,7 @@ func (service *UserService) GetProfile(userID string) (*models.User, *apierror.A
 
 
 // EditProfile updates the user's profile in the database
-func (service *UserService) EditProfile(userID string, name, phoneNumber, imageURL string) *apierror.ApiError {
-	// Find the user by ID
+func (service *UserService) EditProfile(userID string, name, imageURL string) *apierror.ApiError {
 	var user models.User
 	if err := service.DB.First(&user, "id = ?", userID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -52,13 +51,10 @@ func (service *UserService) EditProfile(userID string, name, phoneNumber, imageU
 			Build()
 	}
 
-	// Update fields
 	user.Name = name
-	user.PhoneNumber = phoneNumber
 	user.ImageURL = imageURL
 	user.UpdatedAt = time.Now()
 
-	// Save the changes
 	if err := service.DB.Save(&user).Error; err != nil {
 		return apierror.NewApiErrorBuilder().
 			WithStatus(http.StatusInternalServerError).

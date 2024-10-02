@@ -7,11 +7,8 @@ import (
 	"github.com/Hand-TBN1/hand-backend/utilities"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-
 )
-type GetMessageDTO struct {
-	roomId string
-}
+
 
 type ChatController struct {
 	ChatService *services.ChatService

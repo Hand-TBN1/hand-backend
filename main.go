@@ -42,6 +42,7 @@ func main() {
     )
 
     redisClient := config.NewRedis()
+    config.LoadR2Config()
 
     if redisClient != nil {
         log.Println("Connect Redis Successful")
@@ -71,6 +72,7 @@ func main() {
     routes.RegisterJournalRoutes(engine, db)
     routes.RegisterPrescriptionRoutes(engine, db)
     routes.RegisterChatRoutes(engine,db)
+    routes.RegisterCloudflareRoutes(engine)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(config.Env.ApiPort); err != nil {
