@@ -140,3 +140,14 @@ func (service *AuthService) VerifyOTP(phoneNumber string, otp string) *apierror.
     return nil
 }
 
+func (service *AuthService) GetUserByID(userID string) (*models.User, *apierror.ApiError) {
+    var user models.User
+    if err := service.DB.First(&user, "id = ?", userID).Error; err != nil {
+        return nil, apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusNotFound).
+            WithMessage(apierror.ErrUserNotFound).
+            Build()
+    }
+    return &user, nil
+}
+

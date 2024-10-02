@@ -6,6 +6,7 @@ import (
 	"github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/services"
+	"github.com/Hand-TBN1/hand-backend/utilities"
 	"github.com/gin-gonic/gin"
 )
 
@@ -56,45 +57,6 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 			return
 		}
 
-		// // Set JWT as HTTP-only cookie
-		// c.SetCookie(
-		// 	"auth_token",  
-		// 	token,         
-		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-		// 	"/",           // Cookie path
-		// 	"",            // Domain (empty means default, based on request domain)
-		// 	true,          // Secure (set to true for HTTPS)
-		// 	true,          // HTTPOnly (prevents access from JavaScript)
-		// )
-
-		// c.SetCookie(
-		// 	"user_id",  
-		// 	user.ID.String(),         
-		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-		// 	"/",           
-		// 	"",            
-		// 	false,         // Not HTTP-only 
-		// 	false,         
-		// )
-		// c.SetCookie(
-		// 	"user_name",  
-		// 	user.Name,         
-		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-		// 	"/",           
-		// 	"",            
-		// 	false,         // Not HTTP-only 
-		// 	false,         
-		// )
-		
-		// c.SetCookie(	
-		// 	"user_role",  
-		// 	string(user.Role),         
-		// 	60*60*24*365*0.5, // Expiry time in seconds (0.5 year)
-		// 	"/",           
-		// 	"",            
-		// 	false,         // Not HTTP-only
-		// 	false,         
-		// )
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Login successful",
 			"token" : token,
@@ -104,20 +66,24 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 
 // Handler for sending OTP
 func (ctrl *AuthController) SendOTP(c *gin.Context) {
-    var req struct {
-        PhoneNumber string `json:"phone_number"`
-    }
-
-    if err := c.ShouldBindJSON(&req); err != nil {
+    claims, exists := c.Get("claims")
+    if !exists {
         apiErr := apierror.NewApiErrorBuilder().
-            WithStatus(http.StatusBadRequest).
-            WithMessage(apierror.ErrInvalidInput).
+            WithStatus(http.StatusUnauthorized).
+            WithMessage("Unauthorized access").
             Build()
         c.JSON(apiErr.HttpStatus, apiErr)
         return
     }
+    userClaims := claims.(*utilities.Claims)
 
-    if apiErr := ctrl.AuthService.SendOTP(req.PhoneNumber); apiErr != nil {
+    user, apiErr := ctrl.AuthService.GetUserByID(userClaims.UserID)
+    if apiErr != nil {
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    if apiErr := ctrl.AuthService.SendOTP(user.PhoneNumber); apiErr != nil {
         c.JSON(apiErr.HttpStatus, apiErr)
         return
     }
@@ -128,8 +94,7 @@ func (ctrl *AuthController) SendOTP(c *gin.Context) {
 // Handler for verifying OTP
 func (ctrl *AuthController) VerifyOTP(c *gin.Context) {
     var req struct {
-        PhoneNumber string `json:"phone_number"`
-        OTP         string `json:"otp"`
+        OTP string `json:"otp"`
     }
 
     if err := c.ShouldBindJSON(&req); err != nil {
@@ -141,7 +106,24 @@ func (ctrl *AuthController) VerifyOTP(c *gin.Context) {
         return
     }
 
-    if apiErr := ctrl.AuthService.VerifyOTP(req.PhoneNumber, req.OTP); apiErr != nil {
+    claims, exists := c.Get("claims")
+    if !exists {
+        apiErr := apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusUnauthorized).
+            WithMessage("Unauthorized access").
+            Build()
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+    userClaims := claims.(*utilities.Claims)
+
+    user, apiErr := ctrl.AuthService.GetUserByID(userClaims.UserID)
+    if apiErr != nil {
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    if apiErr := ctrl.AuthService.VerifyOTP(user.PhoneNumber, req.OTP); apiErr != nil {
         c.JSON(apiErr.HttpStatus, apiErr)
         return
     }
