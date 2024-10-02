@@ -58,3 +58,15 @@ func (service *AppointmentService) UpdatePaymentAndAppointmentStatus(orderID str
 	// Save the updated appointment
 	return service.DB.Save(&appointment).Error
 }
+
+// GetAppointmentsByTherapistID fetches all appointments associated with a therapist
+func (service *AppointmentService) GetAppointmentsByTherapistID(therapistID string) ([]models.Appointment, error) {
+	var appointments []models.Appointment
+
+	err := service.DB.Preload("User").Where("therapist_id = ?", therapistID).Find(&appointments).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return appointments, nil
+}

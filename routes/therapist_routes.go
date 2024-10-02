@@ -23,6 +23,7 @@ func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 		therapistRoutes.Use(middleware.RoleMiddleware("therapist", "admin")) 
 		{
 			therapistRoutes.PATCH("/availability", therapistController.UpdateAvailability)
+			therapistRoutes.GET("/appointments", therapistController.GetTherapistAppointments)
 		}
 
 		api.GET("/therapists", therapistController.GetTherapistsFiltered)
