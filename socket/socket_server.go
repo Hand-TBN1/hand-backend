@@ -167,6 +167,9 @@ func findMatch(userID, data string) {
     } else {
         // No suitable match found, re-add to the queue
         redisClient.SAdd(ctx, "waitingQueue", serializedQueueData)
+        clients[userID].Queue = &queueData
+        redisClient.SAdd(ctx, "waitingQueue", matchedData)
+        clients[userID].Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "in_queue", "data": ""}`))
     }
 }
 
