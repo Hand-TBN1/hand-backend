@@ -15,6 +15,6 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
 	api := router.Group("/api")
 	{
 		api.GET("/profile", middleware.RoleMiddleware(), userController.GetProfile)   // Get user profile
-		api.PUT("/profile", middleware.RoleMiddleware(), userController.EditProfile)  // Edit user profile
+		api.PUT("/edit-profile", middleware.RoleMiddleware(), userController.EditProfile)  // Edit user profile
 	}
 }
