@@ -13,7 +13,10 @@ import (
 )
 
 type TherapistController struct {
-	TherapistService *services.TherapistService
+	TherapistService           *services.TherapistService
+	AppointmentService         *services.AppointmentService
+	ConsultationHistoryService *services.ConsultationHistoryService
+	PrescriptionService        *services.PrescriptionService
 }
 
 type CreateTherapistDTO struct {
@@ -204,4 +207,90 @@ func (ctrl *TherapistController) GetTherapistSchedule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"schedules": schedules})
+}
+
+func (ctrl *TherapistController) GetTherapistAppointments(c *gin.Context) {
+	// Extract therapist details from claims (JWT token)
+	claims, exists := c.Get("claims")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	userClaims := claims.(*utilities.Claims)
+
+	// Fetch appointments for the therapist
+	appointments, err := ctrl.AppointmentService.GetAppointmentsByTherapistID(userClaims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch appointments"})
+		return
+	}
+
+	// Return the appointments
+	c.JSON(http.StatusOK, appointments)
+}
+
+// AddPrescriptionAndMedication allows therapists to add a prescription and medication after the appointment
+func (ctrl *TherapistController) AddPrescriptionAndMedication(c *gin.Context) {
+	appointmentID, err := uuid.Parse(c.Param("appointmentID"))
+	if err != nil {
+		apiErr := apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusBadRequest).
+			WithMessage("Invalid appointment ID").
+			Build()
+		c.JSON(apiErr.HttpStatus, apiErr)
+		return
+	}
+
+	var req struct {
+		Conclusion  string `json:"conclusion"`
+		Medications []struct {
+			MedicationID uuid.UUID `json:"medication_id"`
+			Dosage       string    `json:"dosage"`
+		} `json:"medications"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiErr := apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusBadRequest).
+			WithMessage(apierror.ErrInvalidInput).
+			Build()
+		c.JSON(apiErr.HttpStatus, apiErr)
+		return
+	}
+
+	// Save the consultation history
+	consultationHistory := models.ConsultationHistory{
+		AppointmentID:    appointmentID,
+		Conclusion:       req.Conclusion,
+		ConsultationDate: time.Now(),
+	}
+
+	if err := ctrl.ConsultationHistoryService.CreateConsultationHistory(&consultationHistory); err != nil {
+		apiErr := apierror.NewApiErrorBuilder().
+			WithStatus(http.StatusInternalServerError).
+			WithMessage(apierror.ErrInternalServerError).
+			Build()
+		c.JSON(apiErr.HttpStatus, apiErr)
+		return
+	}
+
+	// Save each medication with the associated consultation history
+	for _, med := range req.Medications {
+		prescription := models.Prescription{
+			ConsultationHistoryID: consultationHistory.ID,
+			MedicationID:          med.MedicationID,
+			Dosage:                med.Dosage,
+		}
+		if err := ctrl.PrescriptionService.CreatePrescription(&prescription); err != nil {
+			apiErr := apierror.NewApiErrorBuilder().
+				WithStatus(http.StatusInternalServerError).
+				WithMessage("Failed to save prescription").
+				Build()
+			c.JSON(apiErr.HttpStatus, apiErr)
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Prescription and medication saved successfully"})
 }
