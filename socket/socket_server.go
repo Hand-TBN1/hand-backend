@@ -128,6 +128,8 @@ func handleClientMessage(message []byte, userID string) {
         sendMessageToPartner(userID, msg.Data)
     case "check_match":
         checkMatchStatus(userID)
+    case "end_match":
+        endMatch(userID)
     default:
         log.Printf("Unknown event: %s", msg.Event)
     }
@@ -183,7 +185,7 @@ func createChatRoom(firstUserID, secondUserID string) {
 }
 
 func notifyUsersOfMatch(firstUserID, secondUserID string, roomID uuid.UUID) {
-    message := fmt.Sprintf(`{"event": "matched", "data": "Matched in room %s"}`, roomID)
+    message := fmt.Sprintf(`{"event": "matched", "data": "%s"}`, roomID)
     clients[firstUserID].Ws.WriteMessage(websocket.TextMessage, []byte(message))
     clients[secondUserID].Ws.WriteMessage(websocket.TextMessage, []byte(message))
 }
@@ -305,3 +307,42 @@ func checkMatchStatus(userID string) {
 	}
 }
 
+func endMatch(userID string) {
+    client, exists := clients[userID]
+    if !exists || client.Match == nil {
+        return // Either user is not connected, or there is no match to end
+    }
+
+    // Update the database to mark the chat room as ended
+    var room models.ChatRoom
+    if err := db.Model(&room).Where("id = ?", client.Match.ID).Update("is_end", true).Error; err != nil {
+        log.Printf("Failed to mark chat room as ended: %v", err)
+        return
+    }
+
+    // Clear the match details in the server for both participants
+    firstUserID := client.Match.FirstUserID.String()
+    secondUserID := client.Match.SecondUserID.String()
+
+    // Notify both clients that the match has ended
+    sendFreeResponse(firstUserID)
+    sendFreeResponse(secondUserID)
+
+    // Clear match info from clients map
+    clientsM.Lock()
+    if firstClient, ok := clients[firstUserID]; ok {
+        firstClient.Match = nil
+        firstClient.Queue = nil
+    }
+    if secondClient, ok := clients[secondUserID]; ok {
+        secondClient.Match = nil
+        secondClient.Queue = nil
+    }
+    clientsM.Unlock()
+}
+
+func sendFreeResponse(userID string) {
+    if client, ok := clients[userID]; ok && client.Ws != nil {
+        client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "end", "data": ""}`))
+    }
+}

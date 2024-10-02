@@ -70,6 +70,7 @@ func main() {
     routes.RegisterAppointmentRoutes(engine, db,paymentService)  
     routes.RegisterJournalRoutes(engine, db)
     routes.RegisterPrescriptionRoutes(engine, db)
+    routes.RegisterChatRoutes(engine,db)
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(config.Env.ApiPort); err != nil {
