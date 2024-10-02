@@ -102,3 +102,49 @@ func (ctrl *AuthController) Register(c *gin.Context) {
 		})
 	}
 
+// Handler for sending OTP
+func (ctrl *AuthController) SendOTP(c *gin.Context) {
+    var req struct {
+        PhoneNumber string `json:"phone_number"`
+    }
+
+    if err := c.ShouldBindJSON(&req); err != nil {
+        apiErr := apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusBadRequest).
+            WithMessage(apierror.ErrInvalidInput).
+            Build()
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    if apiErr := ctrl.AuthService.SendOTP(req.PhoneNumber); apiErr != nil {
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "OTP sent successfully"})
+}
+
+// Handler for verifying OTP
+func (ctrl *AuthController) VerifyOTP(c *gin.Context) {
+    var req struct {
+        PhoneNumber string `json:"phone_number"`
+        OTP         string `json:"otp"`
+    }
+
+    if err := c.ShouldBindJSON(&req); err != nil {
+        apiErr := apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusBadRequest).
+            WithMessage(apierror.ErrInvalidInput).
+            Build()
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    if apiErr := ctrl.AuthService.VerifyOTP(req.PhoneNumber, req.OTP); apiErr != nil {
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "OTP verified successfully"})
+}

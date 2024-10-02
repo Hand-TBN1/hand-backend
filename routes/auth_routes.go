@@ -17,5 +17,8 @@ func SetupAuthRoutes(router *gin.Engine, db *gorm.DB) {
 		// Authentication routes
 		api.POST("/register", authController.Register)
 		api.POST("/login", authController.Login)
+		api.POST("/send-otp", authController.SendOTP)
+		api.POST("/verify-otp", authController.VerifyOTP)
 	}
+
 }
