@@ -35,6 +35,12 @@ type CheckInResponseDTO struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+type CheckInAllResponseDTO struct {
+	ID          uuid.UUID `json:"id"`
+	MoodScore   int       `json:"mood_score"`
+	CheckInDate time.Time `json:"check_in_date"`
+}
+
 type CheckInController struct {
 	CheckInService *services.CheckInService
 }
@@ -209,3 +215,38 @@ func (ctrl *CheckInController) CheckTodayCheckIn(c *gin.Context) {
     c.JSON(http.StatusOK, responseDTO)
 }
 
+func (ctrl *CheckInController) GetAllUserCheckIn(c *gin.Context) {
+    claims, exists := c.Get("claims")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access"})
+        return
+    }
+
+    userClaims := claims.(*utilities.Claims)
+    userUUID, err := uuid.Parse(userClaims.UserID)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID in token"})
+        return
+    }
+
+    checkIns, err := ctrl.CheckInService.GetAllUserCheckIns(userUUID)
+    if err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"error": "No check-in found for today"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    checkInDTOs := make([]CheckInAllResponseDTO, len(checkIns))
+    for i, checkIn := range checkIns {
+        checkInDTOs[i] =  CheckInAllResponseDTO{
+            ID:          checkIn.ID,
+            MoodScore:   checkIn.MoodScore,
+            CheckInDate: checkIn.CheckInDate,
+        }
+    }
+
+    c.JSON(http.StatusOK, checkInDTOs)
+}

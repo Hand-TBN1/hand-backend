@@ -73,7 +73,6 @@ func (service *CheckInService) FindCheckInByUserIDAndDate(userID uuid.UUID, date
 
 	
 func (service *CheckInService) UpdateCheckInByUserIDAndDate(userID uuid.UUID, date string, updatedCheckIn models.CheckIn) error {
-	// Ensure the check-in record is updated, not inserted
 	return service.DB.Model(&models.CheckIn{}).
 		Where("user_id = ? AND DATE(check_in_date) = ?", userID, date).
 		Updates(map[string]interface{}{
@@ -84,7 +83,40 @@ func (service *CheckInService) UpdateCheckInByUserIDAndDate(userID uuid.UUID, da
 		}).Error
 }
 
+func (service *CheckInService) FindCheckInByUserIDAndDateRange(userID uuid.UUID, start time.Time, end time.Time) (*models.CheckIn, error) {
+    var checkIn models.CheckIn
+
+    err := service.DB.Where("user_id = ? AND check_in_date BETWEEN ? AND ?", userID, start, end).First(&checkIn).Error
+    if err != nil {
+        return nil, err
+    }
+
+    return &checkIn, nil
+}
+
+
 func (service *CheckInService) CheckTodayCheckIn(userID uuid.UUID) (*models.CheckIn, error) {
-    today := time.Now().UTC().Format("2006-01-02") 
-    return service.FindCheckInByUserIDAndDate(userID, today)
+    location, _ := time.LoadLocation("Asia/Jakarta") 
+
+    localNow := time.Now().In(location)
+
+    startOfDay := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 0, 0, 0, 0, location).UTC()
+    endOfDay := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), 23, 59, 59, 999999999, location).UTC()
+
+    return service.FindCheckInByUserIDAndDateRange(userID, startOfDay, endOfDay)
+}
+
+
+func (s *CheckInService) GetAllUserCheckIns(userID uuid.UUID) ([]models.CheckIn, error) {
+    var checkIns []models.CheckIn
+
+    err := s.DB.Where("user_id = ?", userID).Order("check_in_date desc").Find(&checkIns).Error
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, gorm.ErrRecordNotFound
+        }
+        return nil, err
+    }
+
+    return checkIns, nil
 }

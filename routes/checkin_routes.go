@@ -20,6 +20,7 @@ func RegisterCheckInRoutes(router *gin.Engine, db *gorm.DB) {
 		apiPatients.GET("/:id", checkInController.GetCheckIn)
 		apiPatients.GET("", checkInController.GetAllCheckIns)
 		apiPatients.GET("/ischeckin", checkInController.CheckTodayCheckIn);
+		apiPatients.GET("/all" , checkInController.GetAllUserCheckIn)
 		
 	}
 }
