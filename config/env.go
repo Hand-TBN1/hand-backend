@@ -25,6 +25,11 @@ type environmentVariables struct {
 	MidtransClientKey string
 	MidtransServerKey string
 	MidtransEnvironment midtrans.EnvironmentType
+	
+
+	TwilioAccountSID        string 
+	TwilioAuthToken       string 
+	TwilioVerifyServiceSID string
 }
 
 var Env *environmentVariables
@@ -57,6 +62,13 @@ func LoadEnv() {
 	env.MidtransEnvironment = midtrans.Sandbox
 	if env.MidtransClientKey == "" || env.MidtransServerKey == "" {
 		log.Fatal("Midtrans keys are not set")
+	}
+
+	env.TwilioAccountSID = os.Getenv("TWILIO_ACCOUNT_SID")
+	env.TwilioAuthToken = os.Getenv("TWILIO_AUTH_TOKEN")
+	env.TwilioVerifyServiceSID = os.Getenv("TWILIO_VERIFY_SERVICE_SID")
+	if env.TwilioAccountSID == "" || env.TwilioAuthToken == "" || env.TwilioVerifyServiceSID == "" {
+		log.Fatal("Twilio credentials are not set")
 	}
 
 	Env = env

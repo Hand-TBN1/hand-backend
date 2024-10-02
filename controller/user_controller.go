@@ -63,7 +63,7 @@ func (ctrl *UserController) GetProfile(c *gin.Context) {
 
 
 
-// EditProfile handles the editing of the user's profile
+// EditProfile handles the editing of the user's profile 
 func (ctrl *UserController) EditProfile(c *gin.Context) {
 	// Extract the claims from middleware
 	claims, exists := c.Get("claims")
@@ -77,9 +77,8 @@ func (ctrl *UserController) EditProfile(c *gin.Context) {
 	userClaims := claims.(*utilities.Claims)
 
 	var updatedUserRequest struct {
-		Name        string `json:"name"`
-		PhoneNumber string `json:"phone_number"`
-		ImageURL    string `json:"image_url"`
+		Name     string `json:"name"`
+		ImageURL string `json:"image_url"`
 	}
 
 	if err := c.ShouldBindJSON(&updatedUserRequest); err != nil {
@@ -90,8 +89,8 @@ func (ctrl *UserController) EditProfile(c *gin.Context) {
 		return
 	}
 
-	// Update the profile
-	apiErr := ctrl.UserService.EditProfile(userClaims.UserID, updatedUserRequest.Name, updatedUserRequest.PhoneNumber, updatedUserRequest.ImageURL)
+	// Call the service to update only name and image URL
+	apiErr := ctrl.UserService.EditProfile(userClaims.UserID, updatedUserRequest.Name, updatedUserRequest.ImageURL)
 	if apiErr != nil {
 		c.JSON(apiErr.HttpStatus, apiErr)
 		return

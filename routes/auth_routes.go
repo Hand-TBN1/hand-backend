@@ -2,6 +2,7 @@ package routes
 
 import (
 	"github.com/Hand-TBN1/hand-backend/controller"
+	"github.com/Hand-TBN1/hand-backend/middleware"
 	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -17,5 +18,8 @@ func SetupAuthRoutes(router *gin.Engine, db *gorm.DB) {
 		// Authentication routes
 		api.POST("/register", authController.Register)
 		api.POST("/login", authController.Login)
+		api.POST("/send-otp", middleware.RoleMiddleware(),authController.SendOTP)
+		api.POST("/verify-otp",middleware.RoleMiddleware(), authController.VerifyOTP)
 	}
+
 }
