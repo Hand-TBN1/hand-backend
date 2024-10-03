@@ -23,6 +23,7 @@ type ClientMessage struct {
 	Event string `json:"event"` // Event type (e.g., "find_match", "send_message")
 	Data  string `json:"data"`  // Message content or event data
 }
+
 type ClientQueue struct {
     UserID string `json:"user_id"`
     Emote  int    `json:"emote"`
@@ -34,6 +35,10 @@ type ClientInServer struct {
     Queue *ClientQueue
 }
 
+type TherapyMessageData struct {
+    RoomID  string `json:"room_id"`
+    Message string `json:"message"`
+}
 var (
     upgrader     = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
     clients      = make(map[string]*ClientInServer)
@@ -65,6 +70,7 @@ func main() {
 
 
 func handleConnections(w http.ResponseWriter, r *http.Request) {
+    log.Println("masuk")
     userID, ws, err := authenticateAndUpgrade(w, r)
     if err != nil {
         return // Error handled within function
@@ -132,10 +138,29 @@ func handleClientMessage(message []byte, userID string) {
         endMatch(userID)
     case "cancel_find":
         cancelFind(userID)
+    case "chat_therapy":
+        therapistID := msg.Data // Assume Data contains therapistID for simplicity
+        room, err := findOrCreateTherapyRoom(userID, therapistID)
+        if err != nil {
+            log.Printf("Error finding or creating therapy room: %v", err)
+            return
+        }
+        sendEnterRoomEvent(userID, room.ID)
+
+    case "therapy_message":
+        // Assume Data contains JSON with roomID and message
+        var therapyData TherapyMessageData
+        if err := json.Unmarshal([]byte(msg.Data), &therapyData); err != nil {
+            log.Printf("Error parsing therapy message details: %v", err)
+            return
+        }
+        sendMessageToRoom(userID, therapyData.RoomID, therapyData.Message)
     default:
         log.Printf("Unknown event: %s", msg.Event)
     }
 }
+
+
 
 func findMatch(userID, data string) {
     var queueData ClientQueue
@@ -179,6 +204,7 @@ func createChatRoom(firstUserID, secondUserID string) {
         ID:           roomID,
         FirstUserID:  uuid.MustParse(firstUserID),
         SecondUserID: uuid.MustParse(secondUserID),
+        Type: "anonymous",
         IsEnd:        false,
     }
     db.Create(&newRoom)
@@ -225,8 +251,9 @@ func sendMessageToPartner(userID, message string) {
 
 	data := map[string]interface{}{
 		"event": "message",
-		"data": chatMessage, // Assuming `chatMessage` is your structured data
-	}
+		"data": chatMessage, 
+    }
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		log.Printf("Error marshalling data: %v", err)
@@ -239,7 +266,8 @@ func sendMessageToPartner(userID, message string) {
 
 func findChatRoomForUser(userID string) (*models.ChatRoom, bool) {
     var room models.ChatRoom
-    if err := db.Where("(first_user_id = ? OR second_user_id = ?) AND is_end = false", userID, userID).First(&room).Error; err != nil {
+    // Add the filter for Type = 'anonymous' in the WHERE clause
+    if err := db.Where("(first_user_id = ? OR second_user_id = ?) AND is_end = false AND type = ?", userID, userID, "anonymous").First(&room).Error; err != nil {
         return nil, false
     }
     return &room, true
@@ -390,5 +418,101 @@ func endMatch(userID string) {
 func sendFreeResponse(userID string) {
     if client, ok := clients[userID]; ok && client.Ws != nil {
         client.Ws.WriteMessage(websocket.TextMessage, []byte(`{"event": "end", "data": ""}`))
+    }
+}
+
+
+func findOrCreateTherapyRoom(userID, therapistID string) (*models.ChatRoom, error) {
+    var room models.ChatRoom
+    // Try to find an existing room where is_end is false and type is 'consultation'
+    if err := db.Where("((first_user_id = ? AND second_user_id = ?) OR (first_user_id = ? AND second_user_id = ?)) AND is_end = false AND type = 'consultation'",
+        userID, therapistID, therapistID, userID).First(&room).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            // Create new room if not found
+            newRoom := models.ChatRoom{
+                FirstUserID:  uuid.MustParse(userID),
+                SecondUserID: uuid.MustParse(therapistID),
+                Type:         "consultation",
+                IsEnd:        false,
+            }
+            if err := db.Create(&newRoom).Error; err != nil {
+                return nil, err
+            }
+            return &newRoom, nil
+        }
+        return nil, err
+    }
+    return &room, nil
+}
+
+func sendEnterRoomEvent(userID string, roomID uuid.UUID) {
+    client, exists := clients[userID]
+    if !exists {
+        return
+    }
+    eventData := fmt.Sprintf(`{"event": "enter_room", "data": "%s"}`, roomID)
+    client.Ws.WriteMessage(websocket.TextMessage, []byte(eventData))
+}
+
+func findChatRoomByID(roomID string) (*models.ChatRoom, bool) {
+    var room models.ChatRoom
+    if err := db.Where("id = ?", roomID).First(&room).Error; err != nil {
+        log.Printf("Error finding room by ID: %v", err)
+        return nil, false
+    }
+    return &room, true
+}
+
+func sendMessageToRoom(userID, roomID string, messageContent string) {
+    room, exists := findChatRoomByID(roomID)
+    if !exists {
+        log.Printf("No room found with ID: %s", roomID)
+        return
+    }
+
+    if room.FirstUserID.String() != userID && room.SecondUserID.String() != userID {
+        log.Printf("User %s not part of the room %s", userID, roomID)
+        return
+    }
+
+    // Create the chat message
+    chatMessage := models.ChatMessage{
+        SenderID:       uuid.MustParse(userID),
+        ChatRoomID:     uuid.MustParse(roomID),
+        MessageContent: messageContent,
+        SentAt:         time.Now(),
+    }
+
+    // Save the chat message to the database
+    if result := db.Create(&chatMessage); result.Error != nil {
+        log.Printf("Failed to save chat message: %v", result.Error)
+        return
+    }
+
+    // Prepare the data to be sent to both participants
+    data := map[string]interface{}{
+        "event": "messageTherapis",
+        "data": chatMessage,
+    }
+    jsonData, err := json.Marshal(data)
+    if err != nil {
+        log.Printf("Error marshalling message data: %v", err)
+        return
+    }
+
+    // Send message to both participants
+    sendMessageToClient(room.FirstUserID.String(), jsonData)
+    sendMessageToClient(room.SecondUserID.String(), jsonData)
+}
+
+func sendMessageToClient(userID string, message []byte) {
+    clientsM.Lock()
+    client, ok := clients[userID]
+    clientsM.Unlock()
+
+    if ok && client.Ws != nil {
+        if err := client.Ws.WriteMessage(websocket.TextMessage, message); err != nil {
+            log.Printf("Error sending message to user %s: %v", userID, err)
+        }
     }
 }

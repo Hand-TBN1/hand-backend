@@ -51,6 +51,7 @@ func createEnums(db *gorm.DB) {
         "consultation_enum" :  "CREATE TYPE consultation_enum AS ENUM ('online', 'offline', 'hybrid');",
         "media_enum" : "CREATE TYPE media_enum AS ENUM ('article', 'video');",
         "midtrans_status" : "CREATE TYPE midtrans_status AS ENUM ('challenge', 'pending', 'failure', 'success');",
+        "room_enum": "CREATE TYPE room_enum AS ENUM ('consultation', 'anonymous');",
         // Add more enums as needed
     }
 
