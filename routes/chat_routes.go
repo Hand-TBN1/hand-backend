@@ -16,9 +16,11 @@ func RegisterChatRoutes(router *gin.Engine, db *gorm.DB) {
 	api := router.Group("/api")
 	apiPatients := api.Group("/room", middleware.RoleMiddleware())
 	{
-		
+		apiPatients.GET("/chat",chatController.GetChatRoomsWithMessagesHandler);
 		apiPatients.GET("/message/:roomId", chatController.GetMessageInRoom);
 	
-		
+
 	}
 }
+
+

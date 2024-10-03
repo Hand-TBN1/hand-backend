@@ -36,3 +36,24 @@ func (s *ChatService) IsUserInRoom(userID, roomID uuid.UUID) bool {
 	}
 	return true
 }
+
+func (s *ChatService) GetChatRoomsWithMessages(userUUID uuid.UUID) ([]models.ChatRoom, error) {
+	var chatRooms []models.ChatRoom
+
+	err := s.DB.
+		Model(&models.ChatRoom{}).
+		Joins("JOIN chat_messages ON chat_messages.chat_room_id = chat_rooms.id").
+		Where("chat_rooms.first_user_id = ? OR chat_rooms.second_user_id = ?", userUUID, userUUID). // Ensure user is part of the chat room
+		Where("chat_rooms.type = ?", "consultation"). // Filter for rooms of type 'consultation'
+		Preload("FirstUser").
+		Preload("SecondUser").
+		Group("chat_rooms.id").
+		Having("COUNT(chat_messages.id) > 0"). // Ensure rooms with at least one message
+		Find(&chatRooms).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return chatRooms, nil
+}

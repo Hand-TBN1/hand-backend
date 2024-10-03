@@ -6,14 +6,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type ChatMessage struct {
-    ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
-    SenderID       uuid.UUID `gorm:"type:uuid;not null;foreignKey:SenderID"`
-    ChatRoomID     uuid.UUID `gorm:"type:uuid;not null;foreignKey:ChatRoomID"`
-    MessageContent string
-    SentAt         time.Time
+    type ChatMessage struct {
+        ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primary_key"`
+        SenderID       uuid.UUID `gorm:"type:uuid;not null;foreignKey:SenderID"`
+        ChatRoomID     uuid.UUID `gorm:"type:uuid;not null;foreignKey:ChatRoomID"`
+        MessageContent string
+        SentAt         time.Time
 
-    // Associations
-    Sender   User      `gorm:"foreignKey:SenderID"`
-    ChatRoom ChatRoom  `gorm:"foreignKey:ChatRoomID"`
-}
+        // Associations
+        Sender   User      `gorm:"foreignKey:SenderID"`
+        ChatRoom ChatRoom  `gorm:"foreignKey:ChatRoomID"`
+    }
