@@ -30,6 +30,8 @@ type environmentVariables struct {
 	TwilioAccountSID        string 
 	TwilioAuthToken       string 
 	TwilioVerifyServiceSID string
+
+	FonnteAPIKey string
 }
 
 var Env *environmentVariables
@@ -70,6 +72,11 @@ func LoadEnv() {
 	if env.TwilioAccountSID == "" || env.TwilioAuthToken == "" || env.TwilioVerifyServiceSID == "" {
 		log.Fatal("Twilio credentials are not set")
 	}
+	
+	env.FonnteAPIKey = os.Getenv("FONNTE_API_KEY")
+    if env.FonnteAPIKey == "" {
+        log.Fatal("Fonnte API Key is not set")
+    }
 
 	Env = env
 }
