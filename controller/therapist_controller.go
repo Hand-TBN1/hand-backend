@@ -59,7 +59,7 @@ func (ctrl *TherapistController) CreateTherapist(c *gin.Context) {
 	var createTherapistDTO CreateTherapistDTO
 
 	if err := c.ShouldBindJSON(&createTherapistDTO); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 	var existingUser models.User

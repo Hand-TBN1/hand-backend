@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/models"
@@ -27,15 +28,25 @@ func (ctrl *MedicationController) GetMedications(c *gin.Context) {
 
 func (ctrl *MedicationController) AddMedication(c *gin.Context) {
 	var medication models.Medication
-
-	if err := c.ShouldBindJSON(&medication); err != nil {
-		apiErr := apierror.NewApiErrorBuilder().
-			WithStatus(http.StatusBadRequest).
-			WithMessage("Invalid input").
-			Build()
-		c.JSON(apiErr.HttpStatus, apiErr)
+	
+	stock, err := strconv.Atoi(c.PostForm("stock"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid stock value"})
 		return
 	}
+
+	price, err := strconv.ParseFloat(c.PostForm("price"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid price value"})
+		return
+	}
+
+	medication.Name = c.PostForm("name")
+	medication.Stock = stock
+	medication.Price = int64(price)
+	medication.Description = c.PostForm("description")
+	medication.RequiresPrescription, _ = strconv.ParseBool(c.PostForm("requiresPrescription"))
+	medication.ImageURL = c.PostForm("image")
 
 	apiErr := ctrl.MedicationService.AddMedication(&medication)
 	if apiErr != nil {
