@@ -191,3 +191,22 @@ func (ctrl *AppointmentController) GetUserByAppointmentID(c *gin.Context) {
     c.JSON(http.StatusOK, response)
 }
 
+func (ctrl *AppointmentController) GetUpcomingAppointments(c *gin.Context) {
+    therapistID := c.Param("id")
+
+    // Get the current time in UTC+7 (Asia/Jakarta timezone)
+    location, err := time.LoadLocation("Asia/Jakarta")
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid timezone"})
+        return
+    }
+    currentTimeInLocal := time.Now().In(location)
+
+    appointments, err := ctrl.AppointmentService.GetUpcomingAppointmentsByTherapistID(therapistID, currentTimeInLocal)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch upcoming appointments"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"appointments": appointments})
+}

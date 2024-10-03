@@ -1,6 +1,7 @@
 package services
 
 import (
+	"time"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"gorm.io/gorm"
 	"github.com/google/uuid"
@@ -74,4 +75,21 @@ func (service *AppointmentService) GetAppointmentsByTherapistID(therapistID stri
 
 func (service *AppointmentService) GetAppointmentWithUserByID(appointmentID uuid.UUID, appointment *models.Appointment) error {
     return service.DB.Preload("User").First(appointment, "id = ?", appointmentID).Error
+}
+
+
+func (service *AppointmentService) GetUpcomingAppointmentsByTherapistID(therapistID string, currentTime time.Time) ([]models.Appointment, error) {
+    var appointments []models.Appointment
+
+    err := service.DB.Preload("User").
+        Where("therapist_id = ?", therapistID).
+        Where("appointment_date > ?", currentTime).
+        Order("appointment_date asc").
+        Find(&appointments).Error
+
+    if err != nil {
+        return nil, err
+    }
+
+    return appointments, nil
 }

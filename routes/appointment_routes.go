@@ -20,5 +20,6 @@ func RegisterAppointmentRoutes(router *gin.Engine, db *gorm.DB, paymentService *
 		api.POST("/create-appointment", middleware.RoleMiddleware("patient"), appointmentController.CreateAppointment)
 		api.GET("/appointment-history", middleware.RoleMiddleware("patient"), appointmentController.GetAppointmentHistory)
 		api.GET("/:appointmentID/user", middleware.RoleMiddleware("patient", "therapist") ,appointmentController.GetUserByAppointmentID)
+		api.GET("/upcomingAppointment/:id", middleware.RoleMiddleware("therapist") ,appointmentController.GetUpcomingAppointments)
 	}
 }

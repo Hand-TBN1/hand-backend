@@ -67,6 +67,7 @@ func main() {
     routes.RegisterCheckInRoutes(engine, db)
     routes.RegisterMedicationRoutes(engine, db)
     routes.RegisterMediaRoutes(engine, db)
+    routes.RegisterConsultationRoutes(engine, db)
     routes.RegisterMedicationTransactionHistoryRoutes(engine, db, paymentService)
     routes.RegisterTherapistRoutes(engine, db)
     routes.SetupPaymentRoutes(engine, db)  
