@@ -19,7 +19,7 @@ func (service *PaymentService) CreatePayment(orderID string, grossAmount int64) 
 			Duration: 5,
 		},
 		Callbacks: &snap.Callbacks{
-			Finish: "http://localhost:3000/appointment-history", 
+			Finish: "https://hand.tbn1.site/appointment-history", 
 		},
 	}
 
