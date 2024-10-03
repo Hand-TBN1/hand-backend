@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -77,7 +78,7 @@ func main() {
     routes.RegisterCloudflareRoutes(engine)
 
     c := cron.New()
-    _, err = c.AddFunc("30 14 * * *", func() { 
+    _, err = c.AddFunc("30 16 * * *", func() { 
         users, err := checkInService.CheckUserCheckIns()
         if err != nil {
             log.Println("Error fetching users:", err)
@@ -86,6 +87,7 @@ func main() {
 
         for _, user := range users {
             notificationErr := checkInService.SendReminder(user.PhoneNumber)
+            fmt.Println(user.PhoneNumber)
             if notificationErr != nil {
                 log.Println("Error sending reminder:", notificationErr)
             }

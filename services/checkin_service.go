@@ -134,7 +134,7 @@ func (service *CheckInService) CheckUserCheckIns() ([]models.User, error) {
     err := service.DB.Raw(`
         SELECT * FROM users 
         WHERE is_mobile_verified = true AND id NOT IN 
-        (SELECT user_id FROM check_ins WHERE date = ?)`, today).Scan(&users).Error
+        (SELECT user_id FROM check_ins WHERE created_at = ?)`, today).Scan(&users).Error
 
     if err != nil {
         return nil, err
