@@ -158,3 +158,36 @@ func (ctrl *AppointmentController) GetAppointmentHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result)
 }
+
+func (ctrl *AppointmentController) GetUserByAppointmentID(c *gin.Context) {
+    // Parse appointment ID from the URL
+    appointmentID, err := uuid.Parse(c.Param("appointmentID"))
+    if err != nil {
+        apiErr := apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusBadRequest).
+            WithMessage("Invalid appointment ID").
+            Build()
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    // Fetch the appointment along with the associated user
+    var appointment models.Appointment
+    err = ctrl.AppointmentService.GetAppointmentWithUserByID(appointmentID, &appointment)
+    if err != nil {
+        apiErr := apierror.NewApiErrorBuilder().
+            WithStatus(http.StatusNotFound).
+            WithMessage("Appointment not found").
+            Build()
+        c.JSON(apiErr.HttpStatus, apiErr)
+        return
+    }
+
+    // Return only the user's name and ID
+    response := gin.H{
+        "userID": appointment.User.ID,
+        "name":   appointment.User.Name,
+    }
+    c.JSON(http.StatusOK, response)
+}
+

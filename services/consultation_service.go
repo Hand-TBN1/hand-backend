@@ -10,5 +10,8 @@ type ConsultationHistoryService struct {
 }
 
 func (service *ConsultationHistoryService) CreateConsultationHistory(history *models.ConsultationHistory) error {
-	return service.DB.Create(history).Error
+	if err := service.DB.Create(history).Error; err != nil {
+		return err
+	}
+	return nil
 }

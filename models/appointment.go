@@ -29,5 +29,4 @@ type Appointment struct {
     // Associations
     User       User  `gorm:"foreignKey:UserID"`
     Therapist  User  `gorm:"foreignKey:TherapistID"`
-    ConsultationHistory  ConsultationHistory  `gorm:"foreignKey:AppointmentID"`
 }

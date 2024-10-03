@@ -10,7 +10,9 @@ import (
 
 func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 	therapistService := &services.TherapistService{DB: db}
-	therapistController := &controller.TherapistController{TherapistService: therapistService}
+	consultationService := &services.ConsultationHistoryService{DB: db}
+	prescriptionService := &services.PrescriptionService{DB : db}
+	therapistController := &controller.TherapistController{TherapistService: therapistService, ConsultationHistoryService: consultationService, PrescriptionService: prescriptionService}
 
 	api := router.Group("/api")
 	{
@@ -22,6 +24,7 @@ func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 		therapistRoutes := api.Group("/therapists")
 		therapistRoutes.Use(middleware.RoleMiddleware("therapist", "admin")) 
 		{
+			therapistRoutes.POST("/consultation-history/:appointmentID", therapistController.AddPrescriptionAndMedication)
 			therapistRoutes.PATCH("/availability", therapistController.UpdateAvailability)
 			therapistRoutes.GET("/appointments", therapistController.GetTherapistAppointments)
 		}

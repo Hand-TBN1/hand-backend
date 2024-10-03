@@ -3,6 +3,7 @@ package services
 import (
 	"github.com/Hand-TBN1/hand-backend/models"
 	"gorm.io/gorm"
+	"github.com/google/uuid"
 )
 
 type AppointmentService struct {
@@ -69,4 +70,8 @@ func (service *AppointmentService) GetAppointmentsByTherapistID(therapistID stri
 	}
 
 	return appointments, nil
+}
+
+func (service *AppointmentService) GetAppointmentWithUserByID(appointmentID uuid.UUID, appointment *models.Appointment) error {
+    return service.DB.Preload("User").First(appointment, "id = ?", appointmentID).Error
 }

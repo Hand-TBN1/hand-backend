@@ -19,5 +19,6 @@ func RegisterAppointmentRoutes(router *gin.Engine, db *gorm.DB, paymentService *
 		// Ensure the user is authenticated to create appointments
 		api.POST("/create-appointment", middleware.RoleMiddleware("patient"), appointmentController.CreateAppointment)
 		api.GET("/appointment-history", middleware.RoleMiddleware("patient"), appointmentController.GetAppointmentHistory)
+		api.GET("/:appointmentID/user", middleware.RoleMiddleware("patient", "therapist") ,appointmentController.GetUserByAppointmentID)
 	}
 }

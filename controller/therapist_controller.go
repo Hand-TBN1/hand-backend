@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -28,7 +29,6 @@ type CreateTherapistDTO struct {
 	Specialization   string               `json:"specialization" binding:"required"`
 	Consultation     models.ConsultationType `json:"consultation" binding:"required"`
 	AppointmentRate  int64                `json:"appointment_rate" binding:"required"`
-	IsAvailableToday bool                 `json:"is_available_today"`
 }
 
 func (ctrl *TherapistController) GetTherapistsFiltered(c *gin.Context) {
@@ -233,6 +233,7 @@ func (ctrl *TherapistController) GetTherapistAppointments(c *gin.Context) {
 // AddPrescriptionAndMedication allows therapists to add a prescription and medication after the appointment
 func (ctrl *TherapistController) AddPrescriptionAndMedication(c *gin.Context) {
 	appointmentID, err := uuid.Parse(c.Param("appointmentID"))
+	fmt.Println(appointmentID)
 	if err != nil {
 		apiErr := apierror.NewApiErrorBuilder().
 			WithStatus(http.StatusBadRequest).
@@ -247,6 +248,7 @@ func (ctrl *TherapistController) AddPrescriptionAndMedication(c *gin.Context) {
 		Medications []struct {
 			MedicationID uuid.UUID `json:"medication_id"`
 			Dosage       string    `json:"dosage"`
+			Quantity    string `json:"quantity"`
 		} `json:"medications"`
 	}
 
@@ -261,10 +263,17 @@ func (ctrl *TherapistController) AddPrescriptionAndMedication(c *gin.Context) {
 
 	// Save the consultation history
 	consultationHistory := models.ConsultationHistory{
+		ID:         uuid.New(),
 		AppointmentID:    appointmentID,
 		Conclusion:       req.Conclusion,
 		ConsultationDate: time.Now(),
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
+
+	fmt.Println(consultationHistory);
+	fmt.Println("Service", ctrl.ConsultationHistoryService)
+	fmt.Println("tes", ctrl.ConsultationHistoryService.DB)
 
 	if err := ctrl.ConsultationHistoryService.CreateConsultationHistory(&consultationHistory); err != nil {
 		apiErr := apierror.NewApiErrorBuilder().
@@ -281,6 +290,7 @@ func (ctrl *TherapistController) AddPrescriptionAndMedication(c *gin.Context) {
 			ConsultationHistoryID: consultationHistory.ID,
 			MedicationID:          med.MedicationID,
 			Dosage:                med.Dosage,
+			Quantity: 				med.Quantity,
 		}
 		if err := ctrl.PrescriptionService.CreatePrescription(&prescription); err != nil {
 			apiErr := apierror.NewApiErrorBuilder().
