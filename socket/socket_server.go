@@ -113,7 +113,14 @@ func listenForMessages(ws *websocket.Conn, userID string) {
         _, message, err := ws.ReadMessage()
         if err != nil {
             log.Printf("Error reading message: %v", err)
-            break
+            if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
+                log.Printf("WebSocket closed normally for userID %s", userID)
+                break // Stop the loop for normal closures
+            } else {
+                log.Printf("Recoverable error for userID %s: %v", userID, err)
+
+                continue // Continue the loop for other types of errors
+            }
         }
 
         handleClientMessage(message, userID)
