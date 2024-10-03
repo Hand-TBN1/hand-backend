@@ -26,6 +26,9 @@ type User struct {
     CreatedAt        time.Time
     UpdatedAt        time.Time
 
+    OTP             string    `json:"otp"`           
+    OTPExpiresAt    time.Time `json:"otp_expires_at"` 
+
     // Associations
     Therapist         *Therapist         `gorm:"foreignKey:UserID"`
     AppointmentUser    []Appointment   `gorm:"foreignKey:UserID"`
