@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/Hand-TBN1/hand-backend/routes"
 	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -56,6 +58,7 @@ func main() {
 
     config.SetupMidtrans()
     paymentService := &services.PaymentService{}
+    checkInService := &services.CheckInService{DB: db}
 
     engine := config.NewGin()
     engine.Use(middleware.CORS())
@@ -73,6 +76,32 @@ func main() {
     routes.RegisterPrescriptionRoutes(engine, db)
     routes.RegisterChatRoutes(engine,db)
     routes.RegisterCloudflareRoutes(engine)
+
+    c := cron.New()
+    _, err = c.AddFunc("30 16 * * *", func() { 
+        users, err := checkInService.CheckUserCheckIns()
+        if err != nil {
+            log.Println("Error fetching users:", err)
+            return
+        }
+
+        for _, user := range users {
+            notificationErr := checkInService.SendReminder(user.PhoneNumber)
+            fmt.Println(user.PhoneNumber)
+            if notificationErr != nil {
+                log.Println("Error sending reminder:", notificationErr)
+            }
+        }
+    })
+    if err != nil {
+        log.Fatalf("Error scheduling the task: %v", err)
+    }
+    c.Start()
+    
+
+	go func() {
+		select {}
+	}()
 
     log.Printf("Running on port %s", config.Env.ApiPort) 
     if err := engine.Run(config.Env.ApiPort); err != nil {
