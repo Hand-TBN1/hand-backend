@@ -33,6 +33,10 @@ func (ctrl *ConsultationHistoryController) GetAllUserConsultationHistory(c *gin.
 		})
 	}
 
+	if len(response) == 0 {
+		response = []gin.H{}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"consultations": response,
 	})

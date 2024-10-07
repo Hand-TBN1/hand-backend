@@ -13,5 +13,5 @@ type Prescription struct {
 
 	// Associations
 	ConsultationHistory ConsultationHistory `gorm:"foreignKey:ConsultationHistoryID"`
-	Medication          Medication          `gorm:"foreignKey:MedicationID"`
+	Medication          Medication          `gorm:"foreignKey:MedicationID" json:"medication"`
 }

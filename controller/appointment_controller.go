@@ -155,6 +155,9 @@ func (ctrl *AppointmentController) GetAppointmentHistory(c *gin.Context) {
 			"payment_status":   appointment.PaymentStatus,
 		})
 	}
+	if len(result) == 0 {
+		result = []gin.H{}
+	}
 
 	c.JSON(http.StatusOK, result)
 }

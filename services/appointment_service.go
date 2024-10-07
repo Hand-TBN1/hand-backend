@@ -82,8 +82,11 @@ func (service *AppointmentService) GetUpcomingAppointmentsByTherapistID(therapis
     var appointments []models.Appointment
 
     err := service.DB.Preload("User").
+        Joins("LEFT JOIN consultation_histories ON consultation_histories.appointment_id = appointments.id").
         Where("therapist_id = ?", therapistID).
-        Where("appointment_date > ?", currentTime).
+        Where("consultation_histories.conclusion IS NULL OR consultation_histories.conclusion = ''").
+		Where("status = ?", models.Success). 
+		Where("payment_status = ?", models.MidtransStatusSuccess).
         Order("appointment_date asc").
         Find(&appointments).Error
 
