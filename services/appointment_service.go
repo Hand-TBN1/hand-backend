@@ -2,9 +2,10 @@ package services
 
 import (
 	"time"
+
 	"github.com/Hand-TBN1/hand-backend/models"
-	"gorm.io/gorm"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type AppointmentService struct {
@@ -87,6 +88,7 @@ func (service *AppointmentService) GetUpcomingAppointmentsByTherapistID(therapis
         Where("consultation_histories.conclusion IS NULL OR consultation_histories.conclusion = ''").
 		Where("status = ?", models.Success). 
 		Where("payment_status = ?", models.MidtransStatusSuccess).
+		Where("appointment_date >= ?", currentTime).
         Order("appointment_date asc").
         Find(&appointments).Error
 
@@ -95,4 +97,95 @@ func (service *AppointmentService) GetUpcomingAppointmentsByTherapistID(therapis
     }
 
     return appointments, nil
+}
+
+func (service *AppointmentService) GetAppointmentSummaryByTherapistID(therapistID string) (map[string]int, error) {
+    var totalAppointments int64 = 0
+    var completedAppointments int64 = 0
+    var upcomingAppointments int64 = 0
+
+    if err := service.DB.Model(&models.Appointment{}).
+        Where("therapist_id = ? AND status = ? AND payment_status = ?", 
+            therapistID, models.Success, models.MidtransStatusSuccess).
+        Count(&totalAppointments).Error; err != nil {
+        return nil, err
+    }
+
+    if err := service.DB.Model(&models.Appointment{}).
+        Where("therapist_id = ? AND status = ? AND payment_status = ? AND appointment_date < ?", 
+            therapistID, models.Success, models.MidtransStatusSuccess, time.Now()).
+        Count(&completedAppointments).Error; err != nil {
+        return nil, err
+    }
+
+    if err := service.DB.Model(&models.Appointment{}).
+        Where("therapist_id = ? AND status = ? AND payment_status = ? AND appointment_date >= ?", 
+            therapistID, models.Success, models.MidtransStatusSuccess, time.Now()).
+        Count(&upcomingAppointments).Error; err != nil {
+        return nil, err
+    }
+
+    summary := map[string]int{
+        "total_appointments":     int(totalAppointments),
+        "completed_appointments": int(completedAppointments),
+        "upcoming_appointments":  int(upcomingAppointments),
+    }
+
+    return summary, nil
+}
+
+type AppointmentHistoryResponse struct {
+	AppointmentID string `json:"appointment_id"`
+	Conclusion    string `json:"conclusion,omitempty"`
+	Date          string `json:"date"`
+	Medications   []struct {
+		Name    string `json:"name"`
+		Dosage  string `json:"dosage,omitempty"`
+		Quantity string `json:"quantity,omitempty"`
+	} `json:"medications,omitempty"`
+}
+
+func (s *AppointmentService) GetAppointmentHistoryByUserAndTherapist(userID, therapistID uuid.UUID) ([]AppointmentHistoryResponse, error) {
+    var consultationHistories []models.ConsultationHistory
+
+    err := s.DB.Preload("Appointment").
+        Preload("Prescription.Medication").
+        Joins("JOIN appointments ON appointments.id = consultation_histories.appointment_id").
+        Where("appointments.user_id = ? AND appointments.therapist_id = ?", userID, therapistID).
+        Find(&consultationHistories).Error
+
+    if err != nil {
+        return []AppointmentHistoryResponse{}, err 
+    }
+
+    response := make([]AppointmentHistoryResponse, 0) 
+
+    for _, history := range consultationHistories {
+        medications := make([]struct {
+            Name     string `json:"name"`
+            Dosage   string `json:"dosage,omitempty"`
+            Quantity string `json:"quantity,omitempty"`
+        }, 0) 
+
+        for _, prescription := range history.Prescription {
+            medications = append(medications, struct {
+                Name     string `json:"name"`
+                Dosage   string `json:"dosage,omitempty"`
+                Quantity string `json:"quantity,omitempty"`
+            }{
+                Name:     prescription.Medication.Name,
+                Dosage:   prescription.Dosage,
+                Quantity: prescription.Quantity,
+            })
+        }
+
+        response = append(response, AppointmentHistoryResponse{
+            AppointmentID: history.AppointmentID.String(),
+            Conclusion:    history.Conclusion,
+            Date:          history.ConsultationDate.Format("2006-01-02"),
+            Medications:   medications,
+        })
+    }
+
+    return response, nil
 }

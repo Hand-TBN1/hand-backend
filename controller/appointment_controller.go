@@ -213,3 +213,53 @@ func (ctrl *AppointmentController) GetUpcomingAppointments(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"appointments": appointments})
 }
+
+func (ctrl *AppointmentController) GetAppointmentSummary(c *gin.Context) {
+    therapistID := c.Param("id")
+
+    summary, err := ctrl.AppointmentService.GetAppointmentSummaryByTherapistID(therapistID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch appointment summary"})
+        return
+    }
+
+    if summary == nil {
+        summary = map[string]int{
+            "total_appointments":     0,
+            "completed_appointments": 0,
+            "upcoming_appointments":  0,
+        }
+    }
+
+    c.JSON(http.StatusOK, gin.H{"summary": summary})
+}
+
+func (ctrl *AppointmentController) GetUserPastAppointment(c *gin.Context) {
+	userID := c.Query("userID")
+	therapistID := c.Query("therapistID")
+
+	if userID == "" || therapistID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID and Therapist ID are required"})
+		return
+	}
+
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid User ID"})
+		return
+	}
+
+	therapistUUID, err := uuid.Parse(therapistID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Therapist ID"})
+		return
+	}
+
+	history, err := ctrl.AppointmentService.GetAppointmentHistoryByUserAndTherapist(userUUID, therapistUUID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, history)
+}

@@ -250,3 +250,47 @@ func (ctrl *CheckInController) GetAllUserCheckIn(c *gin.Context) {
 
     c.JSON(http.StatusOK, checkInDTOs)
 }
+
+func (ctrl *CheckInController) GetLast30DaysCheckIns(c *gin.Context) {
+    userID := c.Query("userID")
+    if userID == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+        return
+    }
+
+    userUUID, err := uuid.Parse(userID)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+        return
+    }
+
+    location, err := time.LoadLocation("Asia/Jakarta")
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load time zone"})
+        return
+    }
+	
+    now := time.Now().In(location)
+
+    startDate := now.AddDate(0, 0, -30).Format("2006-01-02")
+    endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, location)
+    endDate := endOfDay.Format("2006-01-02 15:04:05")
+
+    checkIns, err := ctrl.CheckInService.GetCheckInsByDateRange(userUUID, startDate, endDate)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    checkInDTOs := make([]CheckInAllResponseDTO, len(checkIns))
+    for i, checkIn := range checkIns {
+        checkInDTOs[i] = CheckInAllResponseDTO{
+            ID:          checkIn.ID,
+            MoodScore:   checkIn.MoodScore,
+            CheckInDate: checkIn.CheckInDate.In(location),
+        }
+    }
+
+    c.JSON(http.StatusOK, checkInDTOs)
+}
+

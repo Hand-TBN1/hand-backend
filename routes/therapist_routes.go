@@ -14,6 +14,11 @@ func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 	prescriptionService := &services.PrescriptionService{DB : db}
 	therapistController := &controller.TherapistController{TherapistService: therapistService, ConsultationHistoryService: consultationService, PrescriptionService: prescriptionService}
 
+	availabilityService := &services.AvailabilityService{DB: db}
+	availabilityController := &controller.AvailabilityController{
+		AvailabilityService: availabilityService,
+	}
+
 	api := router.Group("/api")
 	{
 		therapistRoutesAdmin := api.Group("/therapists")
@@ -32,5 +37,7 @@ func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 		api.GET("/therapists", therapistController.GetTherapistsFiltered)
 		api.GET("/therapist/:id/details", therapistController.GetTherapistDetails)
 		api.GET("/therapist/:id/schedule", therapistController.GetTherapistSchedule)
+		api.GET("/therapist/:id/blocked-dates", availabilityController.GetBlockedAvailability)
+
 	}
 }

@@ -171,3 +171,18 @@ func (service *CheckInService) SendReminder(phoneNumber string) *apierror.ApiErr
 
     return nil
 }
+
+func (s *CheckInService) GetCheckInsByDateRange(userID uuid.UUID, startDate, endDate string) ([]models.CheckIn, error) {
+    var checkIns []models.CheckIn
+
+    err := s.DB.Where("user_id = ? AND check_in_date BETWEEN ? AND ?", userID, startDate, endDate).
+        Order("check_in_date asc").Find(&checkIns).Error
+    if err != nil {
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return nil, gorm.ErrRecordNotFound
+        }
+        return nil, err
+    }
+
+    return checkIns, nil
+}
