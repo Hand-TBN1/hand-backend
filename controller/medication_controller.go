@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Hand-TBN1/hand-backend/apierror"
+	// "github.com/Hand-TBN1/hand-backend/apierror"
 	"github.com/Hand-TBN1/hand-backend/models"
 	"github.com/Hand-TBN1/hand-backend/services"
 	"github.com/gin-gonic/gin"
@@ -24,6 +24,34 @@ func (ctrl *MedicationController) GetMedications(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, medications)
+}
+
+func (ctrl *MedicationController) GetMedicationByID(c *gin.Context) {
+	id := c.Param("id")
+	medication, apiErr := ctrl.MedicationService.GetMedicationByID(id)
+	if apiErr != nil {
+		c.JSON(apiErr.HttpStatus, apiErr)
+		return
+	}
+	c.JSON(http.StatusOK, medication)
+}
+
+func (ctrl *MedicationController) UpdateMedication(c *gin.Context) {
+    id := c.Param("id")
+    var updateDTO services.UpdateMedicationDTO
+
+    if err := c.ShouldBindJSON(&updateDTO); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+        return
+    }
+
+    err := ctrl.MedicationService.UpdateMedicationByID(id, &updateDTO)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update medication"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Medication updated successfully"})
 }
 
 func (ctrl *MedicationController) AddMedication(c *gin.Context) {
@@ -55,28 +83,6 @@ func (ctrl *MedicationController) AddMedication(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Medication added successfully"})
-}
-
-func (ctrl *MedicationController) UpdateMedication(c *gin.Context) {
-	id := c.Param("id")
-	var updatedMedication models.Medication
-
-	if err := c.ShouldBindJSON(&updatedMedication); err != nil {
-		apiErr := apierror.NewApiErrorBuilder().
-			WithStatus(http.StatusBadRequest).
-			WithMessage("Invalid input").
-			Build()
-		c.JSON(apiErr.HttpStatus, apiErr)
-		return
-	}
-
-	apiErr := ctrl.MedicationService.UpdateMedication(id, &updatedMedication)
-	if apiErr != nil {
-		c.JSON(apiErr.HttpStatus, apiErr)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Medication updated successfully"})
 }
 
 func (ctrl *MedicationController) DeleteMedication(c *gin.Context) {

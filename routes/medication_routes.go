@@ -25,6 +25,7 @@ func RegisterMedicationRoutes(router *gin.Engine, db *gorm.DB) {
 		allRolesRoutes.Use(middleware.RoleMiddleware("patient", "therapist", "admin"))
 		{
 			allRolesRoutes.GET("", medicationController.GetMedications)  // Search by name /medications?name=panadol
+			allRolesRoutes.GET("/:id", medicationController.GetMedicationByID)
 		}
 	}
 }

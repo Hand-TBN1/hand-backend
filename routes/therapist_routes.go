@@ -25,6 +25,7 @@ func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 		therapistRoutesAdmin.Use(middleware.RoleMiddleware("admin"))
 		{
 			therapistRoutesAdmin.POST("/create", therapistController.CreateTherapist)
+			therapistRoutesAdmin.PUT("/:id", therapistController.UpdateTherapist)
 		}
 		therapistRoutes := api.Group("/therapists")
 		therapistRoutes.Use(middleware.RoleMiddleware("therapist", "admin")) 

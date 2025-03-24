@@ -77,3 +77,33 @@ func (service *MediaService) DeleteMedia(id string) *apierror.ApiError {
 	}
 	return nil
 }
+
+type UpdateMediaDTO struct {
+    Title            string
+    Content          string
+    ThumbnailURL     string
+}
+
+func (service *MediaService) UpdateMediaByID(id string, updateDTO *UpdateMediaDTO) *apierror.ApiError {
+    var media models.Media
+
+    if err := service.DB.Where("id = ?", id).First(&media).Error; err != nil {
+        return apierror.NewApiErrorBuilder().
+            WithStatus(404).
+            WithMessage("Media not found").
+            Build()
+    }
+
+    media.Title = updateDTO.Title
+    media.Content = updateDTO.Content
+    media.ThumbnailURL = updateDTO.ThumbnailURL
+
+    if err := service.DB.Save(&media).Error; err != nil {
+        return apierror.NewApiErrorBuilder().
+            WithStatus(500).
+            WithMessage("Failed to save updated media").
+            Build()
+    }
+
+    return nil
+}

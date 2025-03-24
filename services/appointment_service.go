@@ -182,7 +182,7 @@ func (s *AppointmentService) GetAppointmentHistoryByUserAndTherapist(userID, the
         response = append(response, AppointmentHistoryResponse{
             AppointmentID: history.AppointmentID.String(),
             Conclusion:    history.Conclusion,
-            Date:          history.ConsultationDate.Format("2006-01-02"),
+            Date:          history.ConsultationDate.In(time.FixedZone("Asia/Jakarta", 7*60*60)).Format("2006-01-02"),
             Medications:   medications,
         })
     }

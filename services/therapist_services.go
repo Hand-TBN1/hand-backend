@@ -234,3 +234,52 @@ func filterAvailableSlots(timeSlots []time.Time, appointments []models.Appointme
 
 	return availableSlots
 }
+
+type UpdateTherapistDTO struct {
+	Name            string                 `json:"name"`
+	Email           string                 `json:"email"`
+	PhoneNumber     string                 `json:"phone_number"`
+	Location        string                 `json:"location"`
+	Specialization  string                 `json:"specialization"`
+	Consultation    models.ConsultationType `json:"consultation"`
+	AppointmentRate int64                  `json:"appointment_rate"`
+}
+
+func (service *TherapistService) UpdateTherapistByID(therapistID string, updateDTO *UpdateTherapistDTO) *apierror.ApiError {
+    var therapist models.Therapist
+
+    if err := service.DB.Preload("User").Where("user_id = ?", therapistID).First(&therapist).Error; err != nil {
+        return apierror.NewApiErrorBuilder().
+            WithStatus(404).
+            WithMessage("Therapist not found with this UserID").
+            Build()
+    }
+	fmt.Println("Updating AppointmentRate:", updateDTO.AppointmentRate)
+	fmt.Println("Updating AppointmentRate:", updateDTO.PhoneNumber)
+
+    therapist.User.Name = updateDTO.Name
+    therapist.User.Email = updateDTO.Email
+    therapist.User.PhoneNumber = updateDTO.PhoneNumber
+    therapist.Location = updateDTO.Location
+    therapist.Specialization = updateDTO.Specialization
+    therapist.Consultation = updateDTO.Consultation
+    therapist.AppointmentRate = updateDTO.AppointmentRate
+
+    // Save the therapist (main entity)
+	if err := service.DB.Save(&therapist).Error; err != nil {
+		return apierror.NewApiErrorBuilder().
+			WithStatus(500).
+			WithMessage("Failed to save updated therapist").
+			Build()
+	}
+
+	// Explicitly save the associated User model
+	if err := service.DB.Model(&therapist.User).Updates(therapist.User).Error; err != nil {
+		return apierror.NewApiErrorBuilder().
+			WithStatus(500).
+			WithMessage("Failed to save updated user").
+			Build()
+	}
+
+    return nil
+}

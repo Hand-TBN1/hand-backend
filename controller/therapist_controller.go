@@ -304,3 +304,23 @@ func (ctrl *TherapistController) AddPrescriptionAndMedication(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Prescription and medication saved successfully"})
 }
+
+func (ctrl *TherapistController) UpdateTherapist(c *gin.Context) {
+    therapistID := c.Param("id")
+    var updateDTO services.UpdateTherapistDTO
+
+    if err := c.ShouldBindJSON(&updateDTO); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+        return
+    }
+	fmt.Println("Updating AppointmentRate:", updateDTO.AppointmentRate)
+
+    // Call the service to update the therapist
+    err := ctrl.TherapistService.UpdateTherapistByID(therapistID, &updateDTO)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update therapist"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Therapist updated successfully"})
+}
