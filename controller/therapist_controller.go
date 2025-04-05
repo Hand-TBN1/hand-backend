@@ -324,3 +324,39 @@ func (ctrl *TherapistController) UpdateTherapist(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"message": "Therapist updated successfully"})
 }
+
+func (ctrl *TherapistController) GetAvailableTherapists(c *gin.Context) {
+    dateStr := c.Query("date")
+    if dateStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Date query parameter is required"})
+        return
+    }
+    location, err := time.LoadLocation("Asia/Jakarta")
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load timezone"})
+        return
+    }
+    date, err := time.ParseInLocation("2006-01-02", dateStr, location)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use YYYY-MM-DD"})
+        return
+    }
+
+    therapists, apiErr := ctrl.TherapistService.GetTherapistsFiltered("", "", date)
+    if apiErr != nil {
+        c.JSON(apiErr.HttpStatus, gin.H{"error": apiErr.Message})
+        return
+    }
+
+    response := []gin.H{}
+    for _, t := range therapists {
+        response = append(response, gin.H{
+            "name":         t.User.Name,
+            "speciality":    t.Specialization,
+            "available":    true,  
+            "therapist_id": t.UserID, 
+        })
+    }
+
+    c.JSON(http.StatusOK, gin.H{"doctors": response})
+}

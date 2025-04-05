@@ -21,10 +21,6 @@ func RegisterCheckInRoutes(router *gin.Engine, db *gorm.DB) {
 		apiPatients.GET("", checkInController.GetAllCheckIns)
 		apiPatients.GET("/ischeckin", checkInController.CheckTodayCheckIn);
 		apiPatients.GET("/all" , checkInController.GetAllUserCheckIn)
+		apiPatients.GET("/30-days-history", checkInController.GetLast30DaysCheckIns)
 	}
-
-	apiMoodHistory := api.Group("/checkins",  middleware.RoleMiddleware("therapist"))
-    {
-        apiMoodHistory.GET("/30-days-history", checkInController.GetLast30DaysCheckIns)
-    }
 }

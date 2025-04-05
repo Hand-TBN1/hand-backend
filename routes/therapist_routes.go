@@ -39,6 +39,6 @@ func RegisterTherapistRoutes(router *gin.Engine, db *gorm.DB) {
 		api.GET("/therapist/:id/details", therapistController.GetTherapistDetails)
 		api.GET("/therapist/:id/schedule", therapistController.GetTherapistSchedule)
 		api.GET("/therapist/:id/blocked-dates", availabilityController.GetBlockedAvailability)
-
+		api.GET("/therapists/available", therapistController.GetAvailableTherapists)
 	}
 }
